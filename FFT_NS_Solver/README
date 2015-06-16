@@ -1,0 +1,25 @@
+ Solves the Navier-Stokes equations in the Vorticity-Stream Function
+ formulation using a pseudo-spectral approach w/ FFT
+
+ Author: Nicholas A. Battista
+ Created: Novermber 29, 2014
+ Modified: December 5, 2014
+ 
+ Equations of Motion:
+ D (Vorticity) /Dt = nu*Laplacian(Vorticity)  
+ Laplacian(Psi) = - Vorticity                                                       
+
+      Real Space Variables                   Fourier (Frequency) Space                                                          
+       SteamFunction: Psi                     StreamFunction: Psi_hat
+ Velocity: u = Psi_y & v = -Psi_x              Velocity: u_hat ,v_hat
+         Vorticity: Vort                        Vorticity: Vort_hat
+
+
+ IDEA: for each time-step
+       1. Solve Poisson problem for Psi (in Fourier space)
+       2. Compute nonlinear advection term by finding u and v in real
+          variables by doing an inverse-FFT, compute advection, transform
+          back to Fourier space
+       3. Time-step vort_hat in frequency space using a semi-implicit
+          Crank-Nicholson scheme (explicit for nonlinear adv. term, implicit
+          for viscous term)
