@@ -59,6 +59,33 @@ PSEUDO-SPECTRAL (FFT):
 
 LATTICE-BOLTZMANN:
 
+                                   D2Q9 Model:
+
+                                   c6  c2   c5
+                                     \  |  /  
+                                   c3- c9 - c1
+                                     /  |  \  
+                                   c7  c4   c8
+
+     f_i: the probability for site vec(x) to have a particle heading in
+     direction i, at time t. These f_i's are called discretized probability 
+     distribution functions
+
+     LBM IDEA: 
+               1. At each timestep the particle densities propogate in each 
+                  direction (1-8).
+               2. An equivalent "equilibrium" density is found
+               3. Densities relax towards that state, in proportion governed by 
+                  tau (parameter related to viscosity)
+
+     CHOICE OF SIMULATION:
+              -> The code is setup to run a few different geometries:
+	                     a. Flow in a channel
+	                     b. Flow around a cylinder
+	                     c. Flow around a few cylinders
+	                     d. Flow through one porous layer
+	                     e. Flow through multiple porous layers
+
 PANEL METHOD:
 
         Solves the incompressible potential flow equations in 2D.
