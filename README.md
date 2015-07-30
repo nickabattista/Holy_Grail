@@ -1,6 +1,4 @@
- %*****************************************************************************%
- %********************************% HOLY GRAIL %*******************************%
- %*****************************************************************************%
+ HOLY GRAIL
 
  HOLY GRAIL is a collection of various fluid solvers, with built in examples.
    The codes are used mostly for educational and recreational purposes.
@@ -12,9 +10,7 @@
  Website: http://battista.web.unc.edu
  GitHub: http://www.github.com/nickabattista
 
- %*****************************************************************************%
- %******************************% FLUID SOLVERS %******************************%
- %*****************************************************************************%
+CHOICE OF FLUID SOLVERS
 
 PROJECTION:
 
