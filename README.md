@@ -1,20 +1,20 @@
-%*****************************************************************************%
-%********************************% HOLY GRAIL %*******************************%
-%*****************************************************************************%
+ %*****************************************************************************%
+ %********************************% HOLY GRAIL %*******************************%
+ %*****************************************************************************%
 
-HOLY GRAIL is a collection of various fluid solvers, with built in examples.
-  The codes are used mostly for educational and recreational purposes.
+ HOLY GRAIL is a collection of various fluid solvers, with built in examples.
+   The codes are used mostly for educational and recreational purposes.
 
-Author: Nicholas A. Battista
-Email:  nick.battista@unc.edu
-Date Created: 2014
-Institution: University of North Carolina at Chapel Hill
-Website: http://battista.web.unc.edu
-GitHub: http://www.github.com/nickabattista
+ Author: Nicholas A. Battista
+ Email:  nick.battista@unc.edu
+ Date Created: 2014
+ Institution: University of North Carolina at Chapel Hill
+ Website: http://battista.web.unc.edu
+ GitHub: http://www.github.com/nickabattista
 
-%*****************************************************************************%
-%******************************% FLUID SOLVERS %******************************%
-%*****************************************************************************%
+ %*****************************************************************************%
+ %******************************% FLUID SOLVERS %******************************%
+ %*****************************************************************************%
 
 PROJECTION:
 
@@ -61,4 +61,16 @@ LATTICE-BOLTZMANN:
 
 PANEL METHOD:
 
+        Solves the incompressible potential flow equations in 2D.
 
+        Assumptions for Incompressible Potential Flow
+              1. Inviscid
+              2. Incompressible div(V) = 0
+              3. Irrotational   curl(V) = 0
+              4. Steady         partial(u)/partial(t) = 0
+
+        What it does: 
+                
+                This method finds the lift and drag coefficients around an
+                airfoil shape, chosen by the user. It also computes the
+                pressure distribution over the airfoil as well.
