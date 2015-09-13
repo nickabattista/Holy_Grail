@@ -50,13 +50,15 @@ for i=2:Nsteps;
     
     DD_v_p = give_Me_Laplacian(v,dx);
     
-    % Update potential and blocking mechanism
-    v = D*DD_v_p + v.*(v-a).*(v-1) - w - Ival;
-    w = eps*(v - gamma*w);
+    % Update potential and blocking mechanism, using Forward Euler
+    v = v + dt* ( D*DD_v_p + v.*(v-a).*(v-1) - w - Ival );
+    w = w + dt* ( eps*(v - gamma*w) );
     
+    % Store time-step values
     vNext(i,:) = v;
     wNext(i,:) = w;
     
+    % Plot
     plot(x,v,'*-'); hold on;
     pause(0.5);
     clf;
