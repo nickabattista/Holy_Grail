@@ -98,8 +98,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% FUNCTION: the injection function, Iapp = activation wave for system, and
-% returns both the activation as well as updated pulse_time
+% FUNCTION: the injection function, Iapp = Iapp(x,t)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -109,12 +108,11 @@ function [app,pulse_time] = Iapp(pulse_time,i1,i2,I_mag,N,pulse,dp,t,app)
     %Check to see if there should be a pulse
     if t > (pulse_time),
         
-        % Sets pulsing region to current amplitude of I_mag x\in[i1*N,i2*N]
         for j=(floor(i1*N):floor(i2*N)),
-            app(j) = I_mag;  
+            app(j) = I_mag;  %sets the region of the pulse to a current amplitude of I_mag
         end
         
-        % Checks if the pulse is over & then resets pulse_time to the next pulse time.
+        % Checks to see if the pulse is over and then resets pulse_time to the next pulse time.
         if t > (pulse_time+dp),
             pulse_time = pulse_time+pulse;
         end
