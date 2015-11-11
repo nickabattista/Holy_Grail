@@ -7,7 +7,7 @@ function FitzHugh_Nagumo_1d()
 % Created: 09/11/2015
 %
 % Equations:
-% dv/dt = D*grad(v) + v*(v-a)*(v-1) - w - I(t)
+% dv/dt = D*Laplacian(v) + v*(v-a)*(v-1) - w - I(t)
 % dw/dt = eps*(v-gamma*w)
 %
 % Variables & Parameters:
