@@ -21,9 +21,9 @@ function FitzHugh_Nagumo_1d()
 
 % Parameters in model %
 D = 1.0;        % Diffusion coefficient
-a = 0.3;        % Threshold potential
-gamma = 1;      % Resetting rate
-eps = 0.001;    % Blocking strength
+a = 0.3;        % Threshold potential (Note: a=0.3 is traveling wave value, a=0.335 is interesting)
+gamma = 1.0;    % Resetting rate (Note: large values give 'funky thick' traveling wave, gamma = 1.0 is desired)
+eps = 0.001;    % Blocking strength (Note: eps = 0.001 is desired)
 I_mag = 0.05;   % Activation strength
 
 % Discretization/Simulation Parameters %
@@ -44,8 +44,6 @@ dp = pulse/50;        % Set the duration of the current pulse
 pulse_time = 0;       % pulse time is used to store the time that the next pulse of current will happen
 IIapp=zeros(1,N+1);   % this vector holds the values of the applied current along the length of the neuron
 dptime = T_final/100; % This sets the length of time frames that are saved to make a movie.
-
-
 
 % Initialization %
 v = zeros(1,N+1);
@@ -91,6 +89,7 @@ for i=2:Nsteps;
         xlabel('Distance (x)');
         ylabel('Electropotenital (v)');
         ptime = ptime+dptime;
+        fprintf('Time(s): %d\n',t);
         pause(0.01);
     end
     
