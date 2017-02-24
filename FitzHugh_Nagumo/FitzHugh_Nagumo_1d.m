@@ -27,8 +27,8 @@ eps = 0.001;    % Blocking strength (Note: eps = 0.001 is desired)
 I_mag = 0.05;   % Activation strength
 
 % Discretization/Simulation Parameters %
-N = 200;       % # of discretized points
-L = 500;        % Length of domain, [0,L]
+N = 800;       % # of discretized points   %800
+L = 2000;        % Length of domain, [0,L] %500
 dx = L/N;       % Spatial Step
 x = 0:dx:L;     % Computational Domain
 
@@ -36,7 +36,7 @@ x = 0:dx:L;     % Computational Domain
 T_final = 10000;      % Sets the final time
 Np = 10;              % Set the number of pulses
 pulse = T_final/Np;   % determines the length of time between pulses.
-NT = 400000;          % Number of total time-steps to be taken
+NT = 800000;          % Number of total time-steps to be taken
 dt = T_final/NT;      % Time-step taken
 i1 = 0.475;           % fraction of total length where current starts
 i2 = 0.525;           % fraction of total length where current ends
@@ -84,13 +84,14 @@ for i=2:Nsteps;
     %This is used to determine if the current time step will be a frame in the movie
     if t > ptime,
         figure(1)
-        plot(x, v);
-        axis([0 L -0.5 1.5]);
+        plot(x, v,'r-','LineWidth',5);
+        axis([0 L -0.2 1.0]);
+        set(gca,'Linewidth',7);
         xlabel('Distance (x)');
         ylabel('Electropotenital (v)');
         ptime = ptime+dptime;
         fprintf('Time(s): %d\n',t);
-        pause(0.01);
+        pause(0.05);
     end
     
 end

@@ -37,6 +37,8 @@ print_FFT_NS_Info();
 nu=1.0e-3;  % dynamic viscosity
 NX = 128;   % # of grid points in x
 NY = 128;   % # of grid points in y
+LX = 1;     % 'Length' of x-Domain
+LY = 1;     % 'Length' of y-Domain
 
 %
 % Choose initial vorticity state
@@ -50,8 +52,15 @@ choice='bubble2';
 %
 [kMatx, kMaty, kLaplace] = please_Give_Wavenumber_Matrices(NX,NY);
 
+
+% SAVING DATA TO VTK %
+ctsave = 0;
+% CREATE VIZ_IB2D FOLDER and VISIT FILES
+mkdir('vtk_data');
+%print_vtk_files(ctsave,u,v,p,vorticity,LX,LY,NX,NY);
            
 t=0.0;            %Initialize time to 0.0
+fprintf('Simulation Time: %d\n',t);
 nTot = tFinal/dt; %Total number of time-steps
 for n=1:nTot      %Enter Time-Stepping Loop!
     
@@ -78,25 +87,41 @@ for n=1:nTot      %Enter Time-Stepping Loop!
     t=t+dt; 
     
     % Plotting the vorticity field
-    if mod(n,plot_dump) == 0
-        
+%     if mod(n,plot_dump) == 0
+%         
+%         % Transform back to real space via Inverse-FFT
+%         vort_real=real(ifft2(vort_hat));
+%         
+%         % Compute smaller matrices for velocity vector field plots
+%         newSize = 200;       %new desired size of vector field to plot (i.e., instead of 128x128, newSize x newSize for visual appeal)
+%         [u,v,xVals,yVals] = please_Give_Me_Smaller_Velocity_Field_Mats(u,v,NX,NY,newSize);
+%         
+%         contourf(vort_real,10); hold on;
+%         quiver(xVals(1:end),yVals(1:end),u,v); hold on;
+%         
+%         colormap('jet'); colorbar; 
+%         title(['Vorticity and Velocity Field at time ',num2str(t)]);
+%         axis([1 NX 1 NY]);
+%         drawnow;
+%         %pause(0.01);
+%         
+%     end
+    
+    % Save files info!
+    ctsave = ctsave + 1;
+    if mod(ctsave,plot_dump) == 0
+       
         % Transform back to real space via Inverse-FFT
         vort_real=real(ifft2(vort_hat));
         
-        % Compute smaller matrices for velocity vector field plots
-        newSize = 32;       %new desired size of vector field to plot (i.e., instead of 128x128, newSize x newSize for visual appeal)
-        [u,v,xVals,yVals] = please_Give_Me_Smaller_Velocity_Field_Mats(u,v,NX,NY,newSize);
+        % Save .vtk data!
+        print_vtk_files(ctsave,u',v',vort_real',LX,LY,NX,NY);
         
-        contourf(vort_real,10); hold on;
-        quiver(xVals(1:end),yVals(1:end),u,v); hold on;
-        
-        colormap('jet'); colorbar; 
-        title(['Vorticity and Velocity Field at time ',num2str(t)]);
-        axis([1 NX 1 NY]);
-        drawnow;
-        pause(0.01);
+        % Plot simulation time
+        fprintf('Simulation Time: %d\n',t);
         
     end
+    
     
 end
 

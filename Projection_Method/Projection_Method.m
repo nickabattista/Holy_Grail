@@ -68,6 +68,15 @@ choice = 'twoSide_opp';
 print_Simulation_Info(choice,dt,dx,nu,bVel,Ly); 
 
 
+% SAVING DATA TO VTK %
+print_dump = 10;
+ctsave = 0;
+% CREATE VIZ_IB2D FOLDER and VISIT FILES
+mkdir('vtk_data');
+print_vtk_files(ctsave,u,v,p,vorticity,Lx,Ly,nx,ny);
+
+
+
 %
 % BEGIN TIME-STEPIN'!
 % 
@@ -96,11 +105,22 @@ for j=1:nStep
     
     %Update Simulation Time (not needed in algorithm)
     t=t+dt;
-    if ( mod(j,pStep) == 0 )
-        fprintf('Simulation Time: %d\n',t);
+    
+    % PLOTTING IN MATLAB
+    %if ( mod(j,pStep) == 0 )
+    %    fprintf('Simulation Time: %d\n',t);
         
         %Plot Timestep Velocity Fields and Vorticity
-        plot_Velocity_and_Vorticity(dx,nx,ny,xGrid,yGrid,u,v,uAvg,vAvg,vorticity,xStart,yStart);
+    %    plot_Velocity_and_Vorticity(dx,nx,ny,xGrid,yGrid,u,v,uAvg,vAvg,vorticity,xStart,yStart);
+    %end
+    
+
+    % Save files info!
+    ctsave = ctsave + 1;
+    if mod(ctsave,print_dump) == 0
+        vorticity(1:nx+1,1:ny+1)=(u(1:nx+1,2:ny+2)-u(1:nx+1,1:ny+1)-v(2:nx+2,1:ny+1)+v(1:nx+1,1:ny+1))/(2*dx); 
+        print_vtk_files(ctsave,u,v,p,vorticity,Lx,Ly,nx,ny);
+        fprintf('Simulation Time: %d\n',t);
     end
 
 end %ENDS TIME-STEPPING
