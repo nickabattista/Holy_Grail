@@ -440,14 +440,10 @@ elseif strcmp(choice,'half')
     
     fprintf('You are simulating two half planes w/ opposite sign vorticity\n');
     fprintf('Try changing the dynamic viscosity to see how the flow changes\n');
-    fprintf('_________________________________________________________________________\n\n');
-
 
 elseif strcmp(choice,'rand')
    
     fprintf('You are simulating a field of random vorticity values\n');
     fprintf('Try changing the dynamic viscosity to see how the flow changes\n');
-    fprintf('_________________________________________________________________________\n\n');
-
      
 end
