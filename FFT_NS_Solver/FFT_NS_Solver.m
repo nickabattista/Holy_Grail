@@ -42,9 +42,9 @@ LY = 1;     % 'Length' of y-Domain
 
 %
 % Choose initial vorticity state
-% Choices:  'half', 'qtrs', 'rand' ,'bubbles1', 'bubbles2', 'bubbleSplit'
+% Choices:  'half', 'qtrs', 'rand' ,'bubble1', 'bubble2', 'bubbleSplit'
 %
-choice='bubble2';
+choice='bubble1';
 [vort_hat,dt,tFinal,plot_dump] = please_Give_Initial_Vorticity_State(choice,NX,NY);
 
 %
