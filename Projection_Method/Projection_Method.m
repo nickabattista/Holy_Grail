@@ -60,7 +60,7 @@ beta=1.25;       %Relaxation Parameter
 % CHOOSE SIMULATION (gives chosen simulation parameters) %
 % Possible choices: 'cavity_left', 'whirlwind', 'twoSide_same', 'twoSide_opp', 'corner'
 %
-choice = 'twoSide_opp';
+choice = 'cavity_left';
 [uTop,uBot,vRight,vLeft,dt,nStep,pStep,bVel,xStart,yStart] = please_Give_Me_BCs(choice);
 
 
@@ -269,7 +269,7 @@ if strcmp(choice,'cavity_left')
     uTop = 0.0; uBot = 0.0; vRight = 0.0; vLeft = bVel;
     
     dt = 0.01;      %Time-step
-    nStep=300;      %Number of Time-Steps
+    nStep=900;      %Number of Time-Steps
     printStep = 5;  %Print ever # of printStep frames
     
     % Streamlines Info %
