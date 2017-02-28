@@ -9,7 +9,7 @@ function Projection_Method()
 % Modified: December 8, 2014
 % 
 % Equations of Motion:
-% Du/Dt = -Nabla(u) + nu*Laplacian(u)  [Conservation of Momentum]
+% Du/Dt = -Nabla(P) + nu*Laplacian(u)  [Conservation of Momentum]
 % Nabla \cdot u = 0                    [Conservation of Mass]                                   
 %
 %
@@ -32,9 +32,9 @@ pause();
 %
 Lx = 2.0;        %Lenght in x
 Ly = 1.0;        %Length in y
-nx=32;           %Initialize X-Grid (Spatial Resolution in x)
-ny=16;           %Initialize Y-Grid (Spatial Resolution in y)
-dx=2/nx;         %Spatial Distance Definition
+nx=256;          %Initialize X-Grid (Spatial Resolution in x)
+ny=128;           %Initialize Y-Grid (Spatial Resolution in y)
+dx=Lx/nx;        %Spatial Distance Definition in x
 xGrid = 0:dx:Lx; %xGrid
 yGrid = 0:dx:Ly; %yGrid
 
@@ -69,7 +69,7 @@ print_Simulation_Info(choice,dt,dx,nu,bVel,Ly);
 
 
 % SAVING DATA TO VTK %
-print_dump = 10;
+print_dump = 80;
 ctsave = 0;
 % CREATE VIZ_IB2D FOLDER and VISIT FILES
 mkdir('vtk_data');
@@ -84,10 +84,10 @@ t=0.0; %Initialize time
 for j=1:nStep
     
     %Enforce Boundary Conditions (Solve for "ghost velocities")
-    u(1:nx+1,1)=2*uBot-u(1:nx+1,2);
-    u(1:nx+1,ny+2)=2*uTop-u(1:nx+1,ny+1);
-    v(1,1:ny+1)=2*vLeft-v(2,1:ny+1);
-    v(nx+2,1:ny+1)=2*vRight-v(nx+1,1:ny+1);
+    u(1:nx+1,1)= (2*uBot-u(1:nx+1,2) )*tanh(0.25*t);
+    u(1:nx+1,ny+2)= (2*uTop-u(1:nx+1,ny+1) )*tanh(0.25*t);
+    v(1,1:ny+1)= (2*vLeft-v(2,1:ny+1))*tanh(0.25*t);
+    v(nx+2,1:ny+1)= (2*vRight-v(nx+1,1:ny+1) )*tanh(0.25*t);
 
     %Start Predictor-Corrector Steps
     for k=1:numPredCorr
@@ -265,12 +265,13 @@ function [uTop,uBot,vRight,vLeft,dt,nStep,printStep,bVel,xStart,yStart] = please
 
 if strcmp(choice,'cavity_left')
     
-    bVel = 1.0;
+    bVel = 4.0;
     uTop = 0.0; uBot = 0.0; vRight = 0.0; vLeft = bVel;
-    
-    dt = 0.01;      %Time-step
-    nStep=900;      %Number of Time-Steps
-    printStep = 5;  %Print ever # of printStep frames
+
+    endTime = 6.0;
+    dt = 0.00125;                  %Time-step
+    nStep=floor(endTime/dt);      %Number of Time-Steps
+    printStep = 5;                %Print ever # of printStep frames
     
     % Streamlines Info %
     xStart = [0.1 0.5 0.7];

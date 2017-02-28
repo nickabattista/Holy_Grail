@@ -35,8 +35,8 @@ print_FFT_NS_Info();
 % Simulation Parameters
 %
 nu=1.0e-3;  % dynamic viscosity
-NX = 128;   % # of grid points in x
-NY = 128;   % # of grid points in y
+NX = 256;   % # of grid points in x
+NY = 256;   % # of grid points in y
 LX = 1;     % 'Length' of x-Domain
 LY = 1;     % 'Length' of y-Domain
 
@@ -44,7 +44,7 @@ LY = 1;     % 'Length' of y-Domain
 % Choose initial vorticity state
 % Choices:  'half', 'qtrs', 'rand' ,'bubble1', 'bubble2', 'bubbleSplit'
 %
-choice='bubble1';
+choice='bubble2';
 [vort_hat,dt,tFinal,plot_dump] = please_Give_Initial_Vorticity_State(choice,NX,NY);
 
 %
@@ -53,75 +53,92 @@ choice='bubble1';
 [kMatx, kMaty, kLaplace] = please_Give_Wavenumber_Matrices(NX,NY);
 
 
-% SAVING DATA TO VTK %
-ctsave = 0;
-% CREATE VIZ_IB2D FOLDER and VISIT FILES
-mkdir('vtk_data');
-%print_vtk_files(ctsave,u,v,p,vorticity,LX,LY,NX,NY);
-           
 t=0.0;            %Initialize time to 0.0
 fprintf('Simulation Time: %d\n',t);
 nTot = tFinal/dt; %Total number of time-steps
-for n=1:nTot      %Enter Time-Stepping Loop!
+for n=0:nTot      %Enter Time-Stepping Loop!
     
-    %Solve Poisson Equation for Stream Function, psi
-    psi_hat = please_Solve_Poission(vort_hat,kMatx,kMaty,NX,NY);
-    
-    %Find Velocity components via derivatives on the stream function, psi
-    u  =real(ifft2( kMaty.*psi_hat));        % Compute  y derivative of stream function ==> u = psi_y
-    v  =real(ifft2(-kMatx.*psi_hat));        % Compute -x derivative of stream function ==> v = -psi_x
-    
-    %Compute derivatives of voriticty to be "advection operated" on
-    vort_X=real(ifft2( kMatx.*vort_hat  ));  % Compute  x derivative of vorticity
-    vort_Y=real(ifft2( kMaty.*vort_hat  ));  % Compute  y derivative of vorticity
-    
-    %Compute nonlinear part of advection term
-    advect = u.*vort_X + v.*vort_Y;          % Advection Operator on Vorticity: (u,v).grad(vorticity)   
-    advect_hat = fft2(advect);               % Transform advection (nonlinear) term of material derivative to frequency space
+    % Printing zero-th time-step
+    if n==0
         
-    % Compute Solution at the next step (uses Crank-Nicholson Time-Stepping)
-    vort_hat = please_Perform_Crank_Nicholson_Semi_Implict(dt,nu,NX,NY,kLaplace,advect_hat,vort_hat);
-    %vort_hat = ((1/dt + 0.5*nu*kLaplace)./(1/dt - 0.5*nu*kLaplace)).*vort_hat - (1./(1/dt - 0.5*nu*kLaplace)).*advect_hat;
-    
-    % Update time
-    t=t+dt; 
-    
-    % Plotting the vorticity field
-%     if mod(n,plot_dump) == 0
-%         
-%         % Transform back to real space via Inverse-FFT
-%         vort_real=real(ifft2(vort_hat));
-%         
-%         % Compute smaller matrices for velocity vector field plots
-%         newSize = 200;       %new desired size of vector field to plot (i.e., instead of 128x128, newSize x newSize for visual appeal)
-%         [u,v,xVals,yVals] = please_Give_Me_Smaller_Velocity_Field_Mats(u,v,NX,NY,newSize);
-%         
-%         contourf(vort_real,10); hold on;
-%         quiver(xVals(1:end),yVals(1:end),u,v); hold on;
-%         
-%         colormap('jet'); colorbar; 
-%         title(['Vorticity and Velocity Field at time ',num2str(t)]);
-%         axis([1 NX 1 NY]);
-%         drawnow;
-%         %pause(0.01);
-%         
-%     end
-    
-    % Save files info!
-    ctsave = ctsave + 1;
-    if mod(ctsave,plot_dump) == 0
-       
+        %Solve Poisson Equation for Stream Function, psi
+        psi_hat = please_Solve_Poission(vort_hat,kMatx,kMaty,NX,NY);
+
+        %Find Velocity components via derivatives on the stream function, psi
+        u  =real(ifft2( kMaty.*psi_hat));        % Compute  y derivative of stream function ==> u = psi_y
+        v  =real(ifft2(-kMatx.*psi_hat));        % Compute -x derivative of stream function ==> v = -psi_x
+        
+        % SAVING DATA TO VTK %
+        ctsave = 0;
+        % CREATE VIZ_IB2D FOLDER and VISIT FILES
+        mkdir('vtk_data');
+            
         % Transform back to real space via Inverse-FFT
         vort_real=real(ifft2(vort_hat));
-        
+
         % Save .vtk data!
         print_vtk_files(ctsave,u',v',vort_real',LX,LY,NX,NY);
-        
-        % Plot simulation time
-        fprintf('Simulation Time: %d\n',t);
-        
-    end
+   
+    else
     
+        %Solve Poisson Equation for Stream Function, psi
+        psi_hat = please_Solve_Poission(vort_hat,kMatx,kMaty,NX,NY);
+
+        %Find Velocity components via derivatives on the stream function, psi
+        u  =real(ifft2( kMaty.*psi_hat));        % Compute  y derivative of stream function ==> u = psi_y
+        v  =real(ifft2(-kMatx.*psi_hat));        % Compute -x derivative of stream function ==> v = -psi_x
+
+        %Compute derivatives of voriticty to be "advection operated" on
+        vort_X=real(ifft2( kMatx.*vort_hat  ));  % Compute  x derivative of vorticity
+        vort_Y=real(ifft2( kMaty.*vort_hat  ));  % Compute  y derivative of vorticity
+
+        %Compute nonlinear part of advection term
+        advect = u.*vort_X + v.*vort_Y;          % Advection Operator on Vorticity: (u,v).grad(vorticity)   
+        advect_hat = fft2(advect);               % Transform advection (nonlinear) term of material derivative to frequency space
+
+        % Compute Solution at the next step (uses Crank-Nicholson Time-Stepping)
+        vort_hat = please_Perform_Crank_Nicholson_Semi_Implict(dt,nu,NX,NY,kLaplace,advect_hat,vort_hat);
+        %vort_hat = ((1/dt + 0.5*nu*kLaplace)./(1/dt - 0.5*nu*kLaplace)).*vort_hat - (1./(1/dt - 0.5*nu*kLaplace)).*advect_hat;
+
+        % Update time
+        t=t+dt; 
+
+        % Plotting the vorticity field
+    %     if mod(n,plot_dump) == 0
+    %         
+    %         % Transform back to real space via Inverse-FFT
+    %         vort_real=real(ifft2(vort_hat));
+    %         
+    %         % Compute smaller matrices for velocity vector field plots
+    %         newSize = 200;       %new desired size of vector field to plot (i.e., instead of 128x128, newSize x newSize for visual appeal)
+    %         [u,v,xVals,yVals] = please_Give_Me_Smaller_Velocity_Field_Mats(u,v,NX,NY,newSize);
+    %         
+    %         contourf(vort_real,10); hold on;
+    %         quiver(xVals(1:end),yVals(1:end),u,v); hold on;
+    %         
+    %         colormap('jet'); colorbar; 
+    %         title(['Vorticity and Velocity Field at time ',num2str(t)]);
+    %         axis([1 NX 1 NY]);
+    %         drawnow;
+    %         %pause(0.01);
+    %         
+    %     end
+
+        % Save files info!
+        ctsave = ctsave + 1;
+        if mod(ctsave,plot_dump) == 0
+
+            % Transform back to real space via Inverse-FFT
+            vort_real=real(ifft2(vort_hat));
+
+            % Save .vtk data!
+            print_vtk_files(ctsave,u',v',vort_real',LX,LY,NX,NY);
+
+            % Plot simulation time
+            fprintf('Simulation Time: %d\n',t);
+
+        end
+    end
     
 end
 
@@ -193,7 +210,7 @@ elseif strcmp(choice,'bubbleSplit')
     vort(NX/4+1:3*NX/4,NY/4+1:3*NY/4) = b1;
     
     dt=5e-3;      % time step
-    tFinal = 7.5;   % final time
+    tFinal = 7.5; % final time
     plot_dump=10; % interval for plots
     
 elseif strcmp(choice,'bubble2')
@@ -204,10 +221,10 @@ elseif strcmp(choice,'bubble2')
     ex = 2; %Makes sure full bubbles
     sL = 5; %shift left
     a1=repmat(-NX/4+(1-ex):NX/4,[NY/2+ex 1]);
-    b1 = ( (a1-1).^2 +  (a1+1)'.^2 ) < 1024;
+    b1 = ( (a1-1).^2 +  (a1+1)'.^2 ) < NX*8+NX/1.5;
     b1 = double(b1);
     nZ = find(b1);
-    b1(nZ) = 1.0; 
+    b1(nZ) = 0.8; 
     [r1,c1]=find(b1==0);
     for i=1:length(r1)
         b1(r1(i),c1(i))=  2*rand(1)-1;
@@ -216,7 +233,7 @@ elseif strcmp(choice,'bubble2')
 
     
     a2=repmat(-NX/8+(1-ex):NX/8,[NY/4+ex 1]);
-    b2 = ( (a2-1).^2 +  (a2+1)'.^2 ) < 256;
+    b2 = ( (a2-1).^2 +  (a2+1)'.^2 ) < 2*NX+NX/0.75;
     b2 = double(b2);
     nZ = find(b2);
     b2(nZ) = -1.0; 
@@ -228,7 +245,7 @@ elseif strcmp(choice,'bubble2')
    
     sR = 4; %shift right / down
     a3=repmat(-NX/16+(1-ex):NX/16,[NY/8+ex 1]);
-    b3 = ( (a3-1).^2 +  (a3+1)'.^2 ) < 64;
+    b3 = ( (a3-1).^2 +  (a3+1)'.^2 ) < NX/2;
     b3 = double(b3);
     nZ=find(b3);
     b3(nZ)= 1.0; 
