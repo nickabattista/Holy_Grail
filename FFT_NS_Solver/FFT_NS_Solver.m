@@ -104,25 +104,25 @@ for n=0:nTot      %Enter Time-Stepping Loop!
         t=t+dt; 
 
         % Plotting the vorticity field
-    %     if mod(n,plot_dump) == 0
-    %         
-    %         % Transform back to real space via Inverse-FFT
-    %         vort_real=real(ifft2(vort_hat));
-    %         
-    %         % Compute smaller matrices for velocity vector field plots
-    %         newSize = 200;       %new desired size of vector field to plot (i.e., instead of 128x128, newSize x newSize for visual appeal)
-    %         [u,v,xVals,yVals] = please_Give_Me_Smaller_Velocity_Field_Mats(u,v,NX,NY,newSize);
-    %         
-    %         contourf(vort_real,10); hold on;
-    %         quiver(xVals(1:end),yVals(1:end),u,v); hold on;
-    %         
-    %         colormap('jet'); colorbar; 
-    %         title(['Vorticity and Velocity Field at time ',num2str(t)]);
-    %         axis([1 NX 1 NY]);
-    %         drawnow;
-    %         %pause(0.01);
-    %         
-    %     end
+%         if mod(n,plot_dump) == 0
+%             
+%             % Transform back to real space via Inverse-FFT
+%             vort_real=real(ifft2(vort_hat));
+%             
+%             % Compute smaller matrices for velocity vector field plots
+%             newSize = 200;       %new desired size of vector field to plot (i.e., instead of 128x128, newSize x newSize for visual appeal)
+%             [u,v,xVals,yVals] = please_Give_Me_Smaller_Velocity_Field_Mats(u,v,NX,NY,newSize);
+%             
+%             contourf(vort_real,10); hold on;
+%             quiver(xVals(1:end),yVals(1:end),u,v); hold on;
+%             
+%             colormap('jet'); colorbar; 
+%             title(['Vorticity and Velocity Field at time ',num2str(t)]);
+%             axis([1 NX 1 NY]);
+%             drawnow;
+%             %pause(0.01);
+%             
+%         end
 
         % Save files info!
         ctsave = ctsave + 1;
@@ -269,7 +269,7 @@ print_Simulation_Info(choice);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%
+% FUNCTION: Initializes Wavenumber Matrices for FFT
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
