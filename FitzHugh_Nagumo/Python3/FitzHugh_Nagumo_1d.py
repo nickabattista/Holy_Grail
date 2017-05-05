@@ -38,16 +38,16 @@ import warnings
 def give_Me_Laplacian(v,dx):
 
     Npts = v.size
-    DD_v = np.zeros((1,Npts))
+    DD_v = np.zeros(Npts)
 
     for ii in range(1,Npts+1):
        i=ii-1
        if (ii==1):
-           DD_v[0,i] = ( v[0,i+1] - 2*v[0,i] + v[0,-1] ) / dx**2
+           DD_v[i] = ( v[i+1] - 2*v[i] + v[-1] ) / dx**2
        elif (ii == Npts):
-           DD_v[0,i] = ( v[0,1] - 2*v[0,i] + v[0,i-1] ) / dx**2
+           DD_v[i] = ( v[1] - 2*v[i] + v[i-1] ) / dx**2
        else:
-           DD_v[0,i] = ( v[0,i+1] - 2*v[0,i] +  v[0,i-1] ) /dx**2
+           DD_v[i] = ( v[i+1] - 2*v[i] +  v[i-1] ) /dx**2
     
     return DD_v
 
@@ -67,7 +67,7 @@ def Iapp(pulse_time,i1,i2,I_mag,N,pulse,dp,t,app):
         # Sets pulsing region to current amplitude of I_mag x\in[i1*N,i2*N]
         for jj in range(int(np.floor(i1*N)),int(np.floor(i2*N)+1)):
             j=jj-1
-            app[0,j] = I_mag  
+            app[j] = I_mag  
         
         # Checks if the pulse is over & then resets pulse_time to the next pulse time.
         if ( t > (pulse_time+dp) ):
@@ -76,7 +76,7 @@ def Iapp(pulse_time,i1,i2,I_mag,N,pulse,dp,t,app):
     else:
 
         # Resets to no activation
-        app = np.zeros((1,N+1))
+        app = np.zeros(N+1)
     
     
     return app,pulse_time    
@@ -136,20 +136,20 @@ def FitzHugh_Nagumo_1d():
     i2 = 0.525              # fraction of total length where current ends
     dp = pulse/50           # Set the duration of the current pulse
     pulse_time = 0          # pulse time is used to store the time that the next pulse of current will happen
-    IIapp=np.zeros((1,N+1)) # this vector holds the values of the applied current along the length of the neuron
+    IIapp=np.zeros(N+1)     # this vector holds the values of the applied current along the length of the neuron
     dptime = T_final/100    # This sets the length of time frames that are saved to make a movie.
 
     # Initialization #
-    v = np.zeros((1,N+1))
+    v = np.zeros(N+1)
     w = v
     t=0
     ptime = 0       
     tVec = np.arange(0,T_final,dt)
     Nsteps = tVec.size
     vNext = np.zeros((Nsteps,N+1)) 
-    vNext[0,:] = v
+    vNext[0,:] = v.transpose()
     wNext = np.zeros((Nsteps,N+1)) 
-    wNext[0,:] = w
+    wNext[0,:] = w.transpose()
 
     #
     # **** # **** BEGIN SIMULATION! **** # **** #
@@ -174,18 +174,20 @@ def FitzHugh_Nagumo_1d():
         w = wN
 
         # Store time-step values
-        vNext[i,:] = v
-        wNext[i,:] = w
+        vNext[i,:] = v.transpose()
+        wNext[i,:] = w.transpose()
 
         #This is used to determine if the current time step will be a frame in the movie
         if ( t > ptime ):
+
+            plt.clf() #Clear previous plots :)
 
             # Plot Current Time in Simulation
             print('Time(s): {0:6.6f}\n'.format(t))
 
             # Plot Simulation Data
             plt.figure(1)
-            plt.plot(x, v.transpose(),'r-',linewidth=5)
+            plt.plot(x, v,'r-',linewidth=5)
             plt.axis([0,L,-0.2,1.0])
             plt.xlabel('Distance (x)')
             plt.ylabel('Electropotenital (v)')
