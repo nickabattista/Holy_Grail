@@ -2,6 +2,8 @@
  using a predictor-corrector projection method approach
 
  Author: Nicholas A. Battista
+ Email: nickabattista@gmail.com
+ Institution: UNC-CH
  Created: Novermber 24, 2014 (MATLAB)
  Modified: December 8, 2014  (MATLAB)
  Created: April 25, 2017     (Python3)
