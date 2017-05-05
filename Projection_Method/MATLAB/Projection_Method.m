@@ -25,7 +25,7 @@ function Projection_Method()
 
 % Print key fluid solver ideas to screen
 print_Projection_Info();
-pause();
+
 
 %
 % GRID PARAMETERS %
@@ -167,6 +167,7 @@ function [u, v, p, uTemp, vTemp, uAvg, vAvg, vorticity, c] = initialize_Storage(
 
 function [uTemp, vTemp] = give_Auxillary_Velocity_Fields(dt,dx,nu,nx,ny,u,v,uTemp,vTemp)
     
+
     %Find Temporary u-Velocity Field
     for i=2:nx 
         for j=2:ny+1 
@@ -180,6 +181,7 @@ function [uTemp, vTemp] = give_Auxillary_Velocity_Fields(dt,dx,nu,nx,ny,u,v,uTem
             vTemp(i,j)=v(i,j)+dt*(-(0.25/dx)*((u(i,j+1)+u(i,j))*(v(i+1,j)+v(i,j))-(u(i-1,j+1)+u(i-1,j))*(v(i,j)+v(i-1,j))+(v(i,j+1)+v(i,j))^2-(v(i,j)+v(i,j-1))^2)+(nu/dx^2)*(v(i+1,j)+v(i-1,j)+v(i,j+1)+v(i,j-1)-4*v(i,j)));
         end
     end
+
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %

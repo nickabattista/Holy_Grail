@@ -2,8 +2,9 @@
  using a predictor-corrector projection method approach
 
  Author: Nicholas A. Battista
- Created: Novermber 24, 2014
- Modified: December 8, 2014
+ Created: Novermber 24, 2014 (MATLAB)
+ Modified: December 8, 2014  (MATLAB)
+ Created: April 25, 2017     (Python3)
  
  Equations of Motion:
  Du/Dt = -Nabla(u) + nu*Laplacian(u)  [Conservation of Momentum]
@@ -17,3 +18,13 @@
        3. Projection Step: correct the intermediate velocity field to
           obtain a velocity field that satisfies momentum and
           incompressiblity.
+
+ TO RUN: 
+       MATLAB: type <Projection_Method> into the command window
+       Python3: type <run Projection_Method.py>
+
+ VISUALIZE: 
+       MATLAB/Python 3: Open .vtk data (in "vtk_data" folder) in either 
+                        VisIt or ParaView
+
+       NOTE: MATLAB can plot in MATLAB, as well.
