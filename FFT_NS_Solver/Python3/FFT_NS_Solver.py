@@ -416,7 +416,7 @@ def FFT_NS_Solver():
             vort_real = fftpack.ifft2(vort_hat).real
 
             # Save .vtk data!
-            #print_vtk_files(ctsave,u',v',vort_real',LX,LY,NX,NY)
+            print_vtk_files(ctsave,u.transpose(),v.transpose(),vort_real.transpose(),LX,LY,NX,NY)
 
         else:
 
@@ -450,7 +450,7 @@ def FFT_NS_Solver():
                 vort_real = fftpack.ifft2(vort_hat).real
 
                 # Save .vtk data!
-                #print_vtk_files(ctsave,u',v',vort_real',LX,LY,NX,NY)
+                print_vtk_files(ctsave,u.transpose(),v.transpose(),vort_real.transpose(),LX,LY,NX,NY)
 
                 # Plot simulation time
                 print('Simulation Time(s): {0:6.6f}\n'.format(t))

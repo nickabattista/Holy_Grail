@@ -2,8 +2,9 @@
  formulation using a pseudo-spectral approach w/ FFT
 
  Author: Nicholas A. Battista
- Created: Novermber 29, 2014
- Modified: December 5, 2014
+ Created: Novermber 29, 2014 (MATLAB)
+ Modified: December 5, 2014 (MATLAB)
+ Created: April 27, 2017 (Python 3)
  
  Equations of Motion:
  D (Vorticity) /Dt = nu*Laplacian(Vorticity)  
@@ -23,3 +24,11 @@
        3. Time-step vort_hat in frequency space using a semi-implicit
           Crank-Nicholson scheme (explicit for nonlinear adv. term, implicit
           for viscous term)
+
+ TO RUN: 
+       MATLAB: type <FFT_NS_Solver> into the command window
+       Python3: type <run FFT_NS_Solver.py>
+
+ VISUALIZE: 
+       MATLAB/Python 3: Open .vtk data (in vtk_data folder) in either 
+                        VisIt or ParaView
