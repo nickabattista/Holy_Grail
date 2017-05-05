@@ -6,7 +6,7 @@
    The codes are used mostly for educational and recreational purposes.
 
  Author: Nicholas A. Battista
- Email:  nick.battista@unc.edu
+ Email:  nickabattista@gmail.com
  Date Created: 2014
  Institution: University of North Carolina at Chapel Hill
  Website: http://battista.web.unc.edu
