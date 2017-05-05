@@ -32,3 +32,5 @@
  VISUALIZE: 
        MATLAB/Python 3: Open .vtk data (in vtk_data folder) in either 
                         VisIt or ParaView
+
+       NOTE: MATLAB can plot in MATLAB, as well.
