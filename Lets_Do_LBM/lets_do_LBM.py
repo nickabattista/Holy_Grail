@@ -28,6 +28,7 @@ import numpy.matlib as matlib
 from scipy import misc, fftpack
 import os
 from print_vtk_files import *
+import time
 
 ###########################################################################
 #
@@ -86,7 +87,7 @@ def print_simulation_info(choice):
     elif (choice=='cylinder2'):
 
         print('You are simulating flow around a field of cylinders\n')
-        print('Flow proceeds left to right through the channel containing a 2D cylinder\n')
+        print('Flow proceeds left to right through the channel containing 2D cylinders\n')
         print('You should see flow wrapping around the cylinders\n')
         print('Try changing the tau (viscosity) to observe differing dynamics\n')
         print('Also try adding cylinders or changing their place in the "give_Me_Problem_Geometry" function\n\n\n')
@@ -150,7 +151,7 @@ def give_Me_Problem_Geometry(choice,nx,ny,percentPorosity):
         BOUND= double(B1)+double(B2)+double(B3) #PUTS together all cylinder geometry
         BOUND(1:nx,[1 ny])=1                    #Puts "1's" on Left/Right Boundaries
         deltaU = 0.01                           #Incremental increase to inlet velocity
-        endTime = 5000
+        endTime = 4000
 
 
     elif (choice=='porous1'):
@@ -196,10 +197,16 @@ def please_Stream_Distribution(f,nx,ny):
     inds = np.concatenate((a1, a2), axis=0)
     f[0,:,:] =f[0,inds,:]                 #Stream Right
 
+
+
     a1=np.array([ny-1])
     a2=np.arange(0,ny-1,1)
     inds = np.concatenate((a1, a2), axis=0)
     f[1,:,:] =f[1,:,inds]                 #Stream Up
+
+    print(f[1,:,:])
+    time.sleep(2.0) 
+
 
     a1=np.array([0])
     a2=np.arange(1,nx,1)
@@ -315,11 +322,10 @@ def lets_do_LBM():
     Lx = 1; Ly = 1                         # Size of computational domain
     dx = Lx/nx; dy = Ly/ny                 # Grid Resolutions in x and y directions, respectively
     f = density/9.0*np.ones((9,nx,ny))     # Copies density/9 into 9-matrices of size [nx,ny] -> ALLOCATION for all "DIRECTIONS"
-    f_EQ = f                               # Initializes F-equilibrium Storage space
+    f_EQ = density/9.0*np.ones((9,nx,ny))  # Initializes F-equilibrium Storage space
     grid_size= nx*ny                       # Total number of grid cells
     CI= np.arange(0,8*grid_size,grid_size) # Indices to point to FIRST entry of the desired "z-stack" distribution grid      
-
-
+    
     #
     # Chooses which problem to simulate
     #
@@ -333,10 +339,14 @@ def lets_do_LBM():
 
     #Find Indices of NONZERO Elements, i.e., where "boundary points" are
     ON_i,ON_j = np.nonzero(BOUND) # matrix offset of each Occupied Node e.g., A(ON_i,ON_j) ~= 0
-    print(BOUND)
-    print(BOUND[ON_i,ON_j])
+    BOUNCEDBACK = np.zeros((ON_i.size,8))
+    
+    #print(BOUND)
+    #print(BOUND[ON_i,ON_j])
+    #print(BOUNCEDBACK)
+    #print(ON_i.shape)
+    #print(BOUNCEDBACK.shape)
 
-    A=zeros(1,2)
 
     #Offsets Indices for the Different Directions [i.e., levels of F_i=F(:,:,i) ] for known BOUNDARY pts.
     #TO_REFLECT=[ON+CI(1) ON+CI(2) ON+CI(3) ON+CI(4) ON+CI(5) ON+CI(6) ON+CI(7) ON+CI(8)]
@@ -344,10 +354,8 @@ def lets_do_LBM():
 
 
     #Initialization Parameters
-    #avgU=1                           #initialize avg. velocity to 1.0
-    #prevAvgU=1                       #initialize previous-avg. velocity to 1.0
-    ts=0                             #initialize starting time to 0
-    #numactivenodes=sum(sum(1-BOUND)) #Finds number of nodes that ARE NOT boundary pts.
+    ts=0                              # initialize starting time to 0 (time-step)
+    print('Simulation Time: {0:6.6f}\n'.format(ts))
 
 
     # SAVING DATA TO VTK #
@@ -370,12 +378,27 @@ def lets_do_LBM():
     #Begin time-stepping!
     while ( ts < endTime ):
 
+
         # STREAMING STEP (progate in respective directions)
         f = please_Stream_Distribution(f,nx,ny)
 
-       
+
+        #print(f[0,:,:])
+        print('\n\nnext\n\n')
+        #print(f[1,:,:])
+
         #Densities bouncing back at next timestep
         #BOUNCEDBACK=f(TO_REFLECT) 
+        BOUNCEDBACK[:,0] = f[0,ON_i,ON_j]
+        BOUNCEDBACK[:,1] = f[1,ON_i,ON_j]
+        BOUNCEDBACK[:,2] = f[2,ON_i,ON_j]
+        BOUNCEDBACK[:,3] = f[3,ON_i,ON_j]
+        BOUNCEDBACK[:,4] = f[4,ON_i,ON_j]
+        BOUNCEDBACK[:,5] = f[5,ON_i,ON_j]
+        BOUNCEDBACK[:,6] = f[6,ON_i,ON_j]
+        BOUNCEDBACK[:,7] = f[7,ON_i,ON_j]
+
+
 
         #vec(rho) = SUM_i f_i -> SUMS EACH DISTRIBUTION MATRIX TOGETHER
         DENSITY=sum(f)  # Note: denotes sum over third dimension
@@ -389,13 +412,16 @@ def lets_do_LBM():
         #Increase inlet velocity with each time step along left wall
         UX[0,:] = UX[0,:] + deltaU 
 
+
         #Enforce BCs to Zero Velocity / Zero Density
         UX[ON_i,ON_j] = 0      # Makes all Boundary Regions have zero x-velocity -> MATLAB: UX(ON)=0      
         UY[ON_i,ON_j] = 0      # Makes all Boundary Regions have zero y-velocity -> MATLAB: UY(ON)=0
         DENSITY[ON_i,ON_j] = 0 # Makes DENSITY of Boundary Regions have zero value -> MATLAB: DENSITY(ON)=0
 
+
         #Square of Magnitude of Velocity Overall
         U_SQU = UX*UX + UY*UY 
+
 
         #Create "Diagonal" Velocity Quantities
         U_5 =  UX+UY #Create velocity direction to Point 5
@@ -406,11 +432,28 @@ def lets_do_LBM():
         #Calculate the equilibrium distribution
         f_EQ = please_Give_Equilibrium_Distribution(w1,w2,w3,DENSITY,UX,UY,U_SQU,U_5,U_6,U_7,U_8,f_EQ)
 
+
         #Update the PDFs
         f = f - (1/tau)*(f-f_EQ)
 
+
         #BOUNCE BACK DENSITIES for next time-step
-        #f(REFLECTED)= BOUNCEDBACK
+        #f(REFLECTED) = BOUNCEDBACK
+        #REFLECTED= [ON+CI(3) ON+CI(4) ON+CI(1) ON+CI(2) ON+CI(7) ON+CI(8) ON+CI(5) ON+CI(6)]
+        #REFLECTED= [   CI(3)     CI(4)     CI(1)     CI(2)     CI(7)     CI(8)     CI(5)     CI(6)  ]
+        #REFLECTED= [ 3rd_grid  4th_grid  1st_grid  2nd_grid  7th_grid  8th_grid  5th_grid  6th_grid ] (MATLAB)
+        #REFLECTED= [ 2nd lvl   3rd lvl   0th lvl   1st lvl   6th lvl   7th lvl   4th lvl   5th lvl  ] (PYTHON) 
+        
+        #BOUNCE BACK DENSITIES for next time-step
+        f[2,ON_i,ON_j] = BOUNCEDBACK[:,0]
+        f[3,ON_i,ON_j] = BOUNCEDBACK[:,1]
+        f[0,ON_i,ON_j] = BOUNCEDBACK[:,2]
+        f[1,ON_i,ON_j] = BOUNCEDBACK[:,3]
+        f[6,ON_i,ON_j] = BOUNCEDBACK[:,4]
+        f[7,ON_i,ON_j] = BOUNCEDBACK[:,5]
+        f[4,ON_i,ON_j] = BOUNCEDBACK[:,6]
+        f[5,ON_i,ON_j] = BOUNCEDBACK[:,7]
+
 
         #Updates simulation parameters
         ts=ts+1   # update time step
@@ -426,9 +469,9 @@ def lets_do_LBM():
 
             # print to vtk
             print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny)
-            fprintf('Simulation Time: #d\n',ts)
+            print('Simulation Time: {0:6.6f}\n'.format(ts))
         
-
+#### ENDS MAIN TIME-STEPPING ROUTINE #####
 
 if __name__ == "__main__":
     lets_do_LBM()    
