@@ -238,6 +238,35 @@ def please_Stream_Distribution(f,nx,ny):
     return f
 
 
+##########################################################################
+#
+# Function to give the equilibrium distribution, f_EQ.
+#
+##########################################################################
+
+def please_Give_Equilibrium_Distribution(w1,w2,w3,DENSITY,UX,UY,U_SQU,U_5,U_6,U_7,U_8,f_EQ):
+     
+    # Calculate equilibrium distribution: stationary pt in middle.
+    f_EQ[8,:,:] = w1*DENSITY * (1 - (3/2)*U_SQU )
+    
+   
+    # NEAREST-neighbours (i.e., stencil pts directly right,left,top,bottom)
+    # Equilibrium DFs can be obtained from the local Maxwell-Boltzmann SPDF 
+    f_EQ[0,:,:] = w2*DENSITY * (1 + 3*UX + (9/2)*(UX*UX) - (3/2)*U_SQU )
+    f_EQ[1,:,:] = w2*DENSITY * (1 + 3*UY + (9/2)*(UY*UY) - (3/2)*U_SQU )
+    f_EQ[2,:,:] = w2*DENSITY * (1 - 3*UX + (9/2)*(UX*UX) - (3/2)*U_SQU )
+    f_EQ[3,:,:] = w2*DENSITY * (1 - 3*UY + (9/2)*(UY*UY) - (3/2)*U_SQU )
+    
+    # NEXT-NEAREST neighbours (i.e., diagonal elements for stencil pts)
+    # Equilibrium DFs can be obtained from the local Maxwell-Boltzmann SPDF 
+    f_EQ[4,:,:] = w3*DENSITY * (1 + 3*U_5 + (9/2)*(U_5*U_5) - (3/2)*U_SQU )
+    f_EQ[5,:,:] = w3*DENSITY * (1 + 3*U_6 + (9/2)*(U_6*U_6) - (3/2)*U_SQU )
+    f_EQ[6,:,:] = w3*DENSITY * (1 + 3*U_7 + (9/2)*(U_7*U_7) - (3/2)*U_SQU )
+    f_EQ[7,:,:] = w3*DENSITY * (1 + 3*U_8 + (9/2)*(U_8*U_8) - (3/2)*U_SQU )
+    
+    return f_EQ
+
+
 
 
 
@@ -282,8 +311,9 @@ def lets_do_LBM():
     density=0.01                           # Density to be used for initializing whole grid to value 1.0
     w1=4/9; w2=1/9; w3=1/36                # Weights for finding equilibrium distribution
     nx=320; ny=320                         # Number of grid cells
-    nx=10; ny=10                         # Number of grid cells
+    nx=10; ny=10                           # Number of grid cells
     Lx = 1; Ly = 1                         # Size of computational domain
+    dx = Lx/nx; dy = Ly/ny                 # Grid Resolutions in x and y directions, respectively
     f = density/9.0*np.ones((9,nx,ny))     # Copies density/9 into 9-matrices of size [nx,ny] -> ALLOCATION for all "DIRECTIONS"
     f_EQ = f                               # Initializes F-equilibrium Storage space
     grid_size= nx*ny                       # Total number of grid cells
@@ -306,7 +336,7 @@ def lets_do_LBM():
     print(BOUND)
     print(BOUND[ON_i,ON_j])
 
-    #b=np.zeros(nx,ny)
+    A=zeros(1,2)
 
     #Offsets Indices for the Different Directions [i.e., levels of F_i=F(:,:,i) ] for known BOUNDARY pts.
     #TO_REFLECT=[ON+CI(1) ON+CI(2) ON+CI(3) ON+CI(4) ON+CI(5) ON+CI(6) ON+CI(7) ON+CI(8)]
@@ -343,24 +373,26 @@ def lets_do_LBM():
         # STREAMING STEP (progate in respective directions)
         f = please_Stream_Distribution(f,nx,ny)
 
-        '''
+       
         #Densities bouncing back at next timestep
-        BOUNCEDBACK=f(TO_REFLECT) 
+        #BOUNCEDBACK=f(TO_REFLECT) 
 
         #vec(rho) = SUM_i f_i -> SUMS EACH DISTRIBUTION MATRIX TOGETHER
-        DENSITY=sum(f,3)  #Note: '3' denotes sum over third dimension
+        DENSITY=sum(f)  # Note: denotes sum over third dimension
 
         #vec(u) = 1/vec(rho) SUM_i (f_i)(e_i) -> CREATES VELOCITY MATRICES
-        UX=( sum(f(:,:,[1 5 8]),3)-sum(f(:,:,[3 6 7]),3) ) ./ DENSITY 
-        UY=( sum(f(:,:,[2 5 6]),3)-sum(f(:,:,[4 7 8]),3) ) ./ DENSITY
+        UX = ( ( f[0,:,:] + f[4,:,:] + f[7,:,:] ) - ( f[2,:,:] + f[5,:,:] + f[6,:,:]) ) / DENSITY
+        # MATLAB: UX=( sum(f(:,:,[1 5 8]),3)-sum(f(:,:,[3 6 7]),3) ) ./ DENSITY 
+        UY = ( ( f[1,:,:] + f[4,:,:] + f[5,:,:] ) - ( f[3,:,:] + f[6,:,:] + f[7,:,:]) ) / DENSITY
+        # MATLAB: UY=( sum(f(:,:,[2 5 6]),3)-sum(f(:,:,[4 7 8]),3) ) ./ DENSITY
 
         #Increase inlet velocity with each time step along left wall
-        UX(1,1:ny)=UX(1,1:ny) + deltaU 
+        UX[0,:] = UX[0,:] + deltaU 
 
         #Enforce BCs to Zero Velocity / Zero Density
-        UX(ON)=0      #Makes all Boundary Regions have zero x-velocity 
-        UY(ON)=0      #Makes all Boundary Regions have zero y-velocity
-        DENSITY(ON)=0 #Makes DENSITY of Boundary Regions have zero value.
+        UX[ON_i,ON_j] = 0      # Makes all Boundary Regions have zero x-velocity -> MATLAB: UX(ON)=0      
+        UY[ON_i,ON_j] = 0      # Makes all Boundary Regions have zero y-velocity -> MATLAB: UY(ON)=0
+        DENSITY[ON_i,ON_j] = 0 # Makes DENSITY of Boundary Regions have zero value -> MATLAB: DENSITY(ON)=0
 
         #Square of Magnitude of Velocity Overall
         U_SQU = UX*UX + UY*UY 
@@ -378,24 +410,24 @@ def lets_do_LBM():
         f = f - (1/tau)*(f-f_EQ)
 
         #BOUNCE BACK DENSITIES for next time-step
-        f(REFLECTED)= BOUNCEDBACK
+        #f(REFLECTED)= BOUNCEDBACK
 
         #Updates simulation parameters
-        ts=ts+1   #update time step
-
+        ts=ts+1   # update time step
+        
         # Save files info!
         ctsave = ctsave + 1
         if (ctsave % print_dump) == 0:
 
             # compute vorticity
-            dUx_y = UX(1:nx-1,2:ny)-UX(1:nx-1,1:ny-1)
-            dUy_x = UY(2:nx,1:ny-1)-UY(1:nx-1,1:ny-1)
-            vorticity(1:nx-1,1:ny-1)=( dUy_x - dUx_y )/(2)
+            dUx_y = ( UX[0:nx-2,1:ny-1] - UX[0:nx-2,0:ny-2] ) / dy
+            dUy_x = ( UY[1:nx-1,0:ny-2] - UY[0:nx-2,0:ny-2] ) / dx
+            vorticity[0:nx-2,0:ny-2] = dUy_x - dUx_y 
 
             # print to vtk
             print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny)
             fprintf('Simulation Time: #d\n',ts)
-        '''
+        
 
 
 if __name__ == "__main__":
