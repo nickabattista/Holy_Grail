@@ -2,8 +2,9 @@ function lets_do_LBM()
 
 % 2D LATTICE BOLTZMANN (LBM) SIMULATION 
 % Author: Nicholas A. Battista
-% Created: 11/4/2014
-% Modified: 12/2/2014
+% Created: 11/4/2014  (MATLAB)
+% Modified: 12/2/2014 (MATLAB)
+% Created: 5/5/2017   (Python3)
 
 %  D2Q9 Model:
 %  c6  c2   c5  
@@ -30,15 +31,17 @@ print_LBM_Info();
 %
 % Simulation Parameters
 %
-tau=1.4;                      %tau: relaxation parameter related to viscosity
-density=0.01;                 %density to be used for initializing whole grid to value 1.0
-w1=4/9; w2=1/9; w3=1/36;      %weights for finding equilibrium distribution
-nx=256; ny=256;               %number of grid cells
-Lx = 1; Ly = 1;               %Size of computational domain
-f=repmat(density/9,[nx ny 9]);%Copies density/9 into 9-matrices of size [nx,ny] -> ALLOCATION for all "DIRECTIONS"
-f_EQ = f;                     %Initializes F-equilibrium Storage space
-grid_size=nx*ny;              %Total number of grid cells
-CI= 0:grid_size:7*grid_size;  %Indices to point to FIRST entry of the desired "z-stack" distribution grid      
+tau=0.53;                     % tau: relaxation parameter related to viscosity
+density=0.01;                 % density to be used for initializing whole grid to value 1.0
+w1=4/9; w2=1/9; w3=1/36;      % weights for finding equilibrium distribution
+nx=320; ny=320;               % number of grid cells in x and y directions, respectively
+%nx=10; ny=10;                 % number of grid cells in x and y directions, respectively
+Lx = 1; Ly = 1;               % Size of computational domain
+dx = Lx/nx; dy = Ly/ny;       % Grid Resolution in x and y directions, respectively
+f=repmat(density/9,[nx ny 9]);% Copies density/9 into 9-matrices of size [nx,ny] -> ALLOCATION for all "DIRECTIONS"
+f_EQ = f;                     % Initializes F-equilibrium Storage space
+grid_size=nx*ny;              % Total number of grid cells
+CI= 0:grid_size:7*grid_size;  % Indices to point to FIRST entry of the desired "z-stack" distribution grid      
 
 
 %
@@ -46,7 +49,7 @@ CI= 0:grid_size:7*grid_size;  %Indices to point to FIRST entry of the desired "z
 %
 % Possible Choices: 'cylinder1', 'cylinder2', 'channel', 'porous1', 'porous2'
 %
-choice = 'porous2';
+choice = 'cylinder2';
 percentPorosity = 0.25;  % Percent of Domain that's Porous (does not matter if not studying porous problem)
 [BOUND,deltaU,endTime] = give_Me_Problem_Geometry(choice,nx,ny,percentPorosity); %BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
 print_simulation_info(choice);
@@ -62,10 +65,8 @@ REFLECTED= [ON+CI(3) ON+CI(4) ON+CI(1) ON+CI(2) ON+CI(7) ON+CI(8) ON+CI(5) ON+CI
 
 
 %Initialization Parameters
-avgU=1;                           %initialize avg. velocity to 1.0
-prevAvgU=1;                       %initialize previous-avg. velocity to 1.0
-ts=0;                             %initialize starting time to 0
-numactivenodes=sum(sum(1-BOUND)); %Finds number of nodes that ARE NOT boundary pts.
+ts=0;                             %initialize starting time to 0 (time-step)
+fprintf('Simulation Time: %d\n',ts);
 
 
 % SAVING DATA TO VTK %
@@ -73,7 +74,7 @@ print_dump = floor(endTime/50);
 ctsave = 0;
 % CREATE VIZ_IB2D FOLDER and VISIT FILES
 mkdir('vtk_data');
-UX = zeros(nx,ny); UY = UX; vorticity = UX(1:end-1,1:end-1); 
+UX = zeros(nx,ny); UY = UX; vorticity = UX(1:end-1,1:end-1);
 print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny);
 
 
@@ -85,7 +86,7 @@ while ts < endTime
     f = please_Stream_Distribution(f,nx,ny);
     
     %Densities bouncing back at next timestep
-    BOUNCEDBACK=f(TO_REFLECT); 
+    BOUNCEDBACK=f(TO_REFLECT);
     
     %vec(rho) = SUM_i f_i -> SUMS EACH DISTRIBUTION MATRIX TOGETHER
     DENSITY=sum(f,3);  %Note: '3' denotes sum over third dimension
@@ -118,7 +119,7 @@ while ts < endTime
     f = f - (1/tau)*(f-f_EQ);
     
     %BOUNCE BACK DENSITIES for next time-step
-    f(REFLECTED)=BOUNCEDBACK;
+    f(REFLECTED)= BOUNCEDBACK;
     
     %Updates simulation parameters
     ts=ts+1;   %update time step
@@ -128,9 +129,9 @@ while ts < endTime
     if mod(ctsave,print_dump) == 0
 
         % compute vorticity
-        dUx_y = UX(1:nx-1,2:ny)-UX(1:nx-1,1:ny-1);
-        dUy_x = UY(2:nx,1:ny-1)-UY(1:nx-1,1:ny-1);
-        vorticity(1:nx-1,1:ny-1)=( dUy_x - dUx_y )/(2);
+        dUx_y = ( UX(1:nx-1,2:ny)-UX(1:nx-1,1:ny-1) ) / dy;
+        dUy_x = ( UY(2:nx,1:ny-1)-UY(1:nx-1,1:ny-1) ) / dx;
+        vorticity(1:nx-1,1:ny-1)=( dUy_x - dUx_y );
         
         % print to vtk
         print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny);
@@ -170,17 +171,17 @@ elseif strcmp(choice,'cylinder2')
 
     %CHANNEL FLOW W/ CYLINDER
     a=repmat(-(nx-1)/2:(nx-1)/2,[ny,1]);
-    r = floor(nx/5);
+    r = floor(nx/2.5);
     aL = floor(nx/5);
-    aR = ceil(nx/5);
-    aM = 1;
-    B1=  ( ( (a).^2+(a+aR)'.^2)<r );          %PUTS "1's" within region of Cylinder1
-    B2=  ( ( (a+aL).^2+(a-aM)'.^2)<r );        %PUTS "1's" within region of Cylinder2
-    B3=  ( ( (a-aL).^2+(a-aM)'.^2)<r );        %PUTS "1's" within region of Cylinder1
+    aR = ceil(nx/2);
+    aM = 0.3*aR;
+    B1=  ( ( (a).^2+(a+3.75*aR/5)'.^2)<r );           %PUTS "1's" within region of Cylinder1
+    B2=  ( ( (a+aL/1.75).^2+(a+4*aM/5)'.^2)<r );        %PUTS "1's" within region of Cylinder2
+    B3=  ( ( (a-aL/1.75).^2+(a+4*aM/5)'.^2)<r );        %PUTS "1's" within region of Cylinder1
     BOUND= double(B1)+double(B2)+double(B3); %PUTS together all cylinder geometry
     BOUND(1:nx,[1 ny])=1;                    %Puts "1's" on Left/Right Boundaries
     deltaU = 0.01;                           %Incremental increase to inlet velocity
-    endTime = 5000;
+    endTime = 4000;
 
 elseif strcmp(choice,'channel')
     
@@ -367,7 +368,8 @@ elseif ( strcmp(choice,'cylinder1') || strcmp(choice,'cylinder2') )
     ylabel('Velocity Magnitude'); 
     title('Cross-sectional Velocities Along Channel');
     legend('Radii before','Middle cylinder','Radii after','3/4 down tube');
-    axis([0 nx 0 1.05*max(max(mat))]);
+    maxy = 1.05*max(max(mat));
+    axis([0 nx 0 maxy]);
        
 elseif strcmp(choice,'porous1')
     
@@ -477,8 +479,9 @@ function print_LBM_Info()
 
 fprintf('\n\n 2D LATTICE BOLTZMANN (LBM) SIMULATION \n');
 fprintf('Author: Nicholas A. Battista\n');
-fprintf('Created: 11/4/2014\n');
-fprintf('Modified: 12/2/2014\n\n');
+fprintf('Created: 11/4/2014  (MATLAB)\n');
+fprintf('Modified: 12/2/2014 (MATLAB)\n');
+fprintf('Created: 5/5/2017   (Python3)\n\n');
 fprintf('_____________________________________________________________________________\n\n');
 fprintf('D2Q9 Model:\n\n');
 fprintf('c6  c2   c5\n');
@@ -523,7 +526,7 @@ elseif strcmp(choice,'cylinder1')
 elseif strcmp(choice,'cylinder2')
     
     fprintf('You are simulating flow around a field of cylinders\n');
-    fprintf('Flow proceeds left to right through the channel containing a 2D cylinder\n');
+    fprintf('Flow proceeds left to right through the channel containing 2D cylinders\n');
     fprintf('You should see flow wrapping around the cylinders\n');
     fprintf('Try changing the tau (viscosity) to observe differing dynamics\n');
     fprintf('Also try adding cylinders or changing their place in the "give_Me_Problem_Geometry" function\n\n\n');
