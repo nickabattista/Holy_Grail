@@ -192,55 +192,71 @@ def give_Me_Problem_Geometry(choice,nx,ny,percentPorosity):
 
 def please_Stream_Distribution(f,nx,ny):
     
+    oInds = np.arange(0,ny,1)                # Indices Vector 0,1,...ny-1
+
+    # STREAM RIGHT
     a1=np.array([nx-1])
     a2=np.arange(0,nx-1,1)
     inds = np.concatenate((a1, a2), axis=0)
-    f[0,:,:] =f[0,inds,:]                 #Stream Right
+    f[0,oInds,:] =f[0,inds,:]                 #Stream Right
 
 
-
+    # STREAM UP
     a1=np.array([ny-1])
     a2=np.arange(0,ny-1,1)
     inds = np.concatenate((a1, a2), axis=0)
-    f[1,:,:] =f[1,:,inds]                 #Stream Up
-
-    print(f[1,:,:])
-    time.sleep(2.0) 
+    f[1,:,oInds] =f[1,:,inds]                 #Stream Up
 
 
+    # STREAM LEFT
     a1=np.array([0])
     a2=np.arange(1,nx,1)
     inds = np.concatenate((a2, a1), axis=0)
-    f[2,:,:] =f[2,inds,:]                #Stream Left
+    f[2,oInds,:] =f[2,inds,:]                #Stream Left
 
+
+    # STREAM DOWN
     a1=np.array([0])
     a2=np.arange(1,ny,1)
     inds = np.concatenate((a2, a1), axis=0)
-    f[3,:,:] =f[3,:,inds]                #Stream Down
+    f[3,:,oInds] =f[3,:,inds]                #Stream Down
 
+
+    # STREAM RIGHT-UP!
     a1=np.array([nx-1]); a2=np.arange(0,nx-1,1)
     inds = np.concatenate((a1, a2), axis=0)
     b1=np.array([ny-1]); b2=np.arange(0,ny-1,1)
     indsY = np.concatenate((b1, b2), axis=0)
-    f[4,:,:] =f[4,inds,indsY]           #Stream Right-Up
+    f[4,oInds,:] =f[4,inds,:]            #Stream Right
+    f[4,:,oInds] =f[4,:,indsY]           #Stream Up
 
+
+    # STREAM LEFT-UP!
     a1=np.array([0]); a2=np.arange(1,nx,1)
     inds = np.concatenate((a2, a1), axis=0)
     b1=np.array([ny-1]); b2=np.arange(0,ny-1,1)
     indsY = np.concatenate((b1, b2), axis=0)
-    f[5,:,:] =f[5,inds,indsY]           #Stream Left-Up
+    f[5,oInds,:] =f[5,inds,:]            #Stream Left
+    f[5,:,oInds] =f[5,:,indsY]           #Stream Up
 
+
+    # STREAM LEFT-DOWN
     a1=np.array([0]); a2=np.arange(1,nx,1)
     inds = np.concatenate((a2, a1), axis=0)
     b1=np.array([0]); b2=np.arange(1,ny,1)
     indsY = np.concatenate((b2, b1), axis=0)
-    f[6,:,:] =f[6,inds,indsY]           #Stream Left-Down    
+    f[6,oInds,:] =f[6,inds,:]            #Stream Left
+    f[6,:,oInds] =f[6,:,indsY]           #Stream Down
 
+
+    # STREAM RIGHT-DOWN
     a1=np.array([nx-1]); a2=np.arange(0,nx-1,1)
     inds = np.concatenate((a1, a2), axis=0)
     b1=np.array([0]); b2=np.arange(1,ny,1)
     indsY = np.concatenate((b2, b1), axis=0)
-    f[7,:,:] =f[7,inds,indsY]           #Stream Right-Down
+    f[7,oInds,:] =f[7,inds,:]            #Stream Right
+    f[7,:,oInds] =f[7,:,indsY]           #Stream Down
+
 
     return f
 
@@ -314,11 +330,10 @@ def lets_do_LBM():
     #
     # Simulation Parameters
     #
-    tau=0.53                               # Tau: relaxation parameter related to viscosity
+    tau=0.9#0.53                           # Tau: relaxation parameter related to viscosity
     density=0.01                           # Density to be used for initializing whole grid to value 1.0
     w1=4/9; w2=1/9; w3=1/36                # Weights for finding equilibrium distribution
-    nx=320; ny=320                         # Number of grid cells
-    nx=10; ny=10                           # Number of grid cells
+    nx=64; ny=64                           # Number of grid cells
     Lx = 1; Ly = 1                         # Size of computational domain
     dx = Lx/nx; dy = Ly/ny                 # Grid Resolutions in x and y directions, respectively
     f = density/9.0*np.ones((9,nx,ny))     # Copies density/9 into 9-matrices of size [nx,ny] -> ALLOCATION for all "DIRECTIONS"
@@ -340,17 +355,6 @@ def lets_do_LBM():
     #Find Indices of NONZERO Elements, i.e., where "boundary points" are
     ON_i,ON_j = np.nonzero(BOUND) # matrix offset of each Occupied Node e.g., A(ON_i,ON_j) ~= 0
     BOUNCEDBACK = np.zeros((ON_i.size,8))
-    
-    #print(BOUND)
-    #print(BOUND[ON_i,ON_j])
-    #print(BOUNCEDBACK)
-    #print(ON_i.shape)
-    #print(BOUNCEDBACK.shape)
-
-
-    #Offsets Indices for the Different Directions [i.e., levels of F_i=F(:,:,i) ] for known BOUNDARY pts.
-    #TO_REFLECT=[ON+CI(1) ON+CI(2) ON+CI(3) ON+CI(4) ON+CI(5) ON+CI(6) ON+CI(7) ON+CI(8)]
-    #REFLECTED= [ON+CI(3) ON+CI(4) ON+CI(1) ON+CI(2) ON+CI(7) ON+CI(8) ON+CI(5) ON+CI(6)]
 
 
     #Initialization Parameters
@@ -383,10 +387,6 @@ def lets_do_LBM():
         f = please_Stream_Distribution(f,nx,ny)
 
 
-        #print(f[0,:,:])
-        print('\n\nnext\n\n')
-        #print(f[1,:,:])
-
         #Densities bouncing back at next timestep
         #BOUNCEDBACK=f(TO_REFLECT) 
         BOUNCEDBACK[:,0] = f[0,ON_i,ON_j]
@@ -399,6 +399,9 @@ def lets_do_LBM():
         BOUNCEDBACK[:,7] = f[7,ON_i,ON_j]
 
 
+        #print(f[1,:,:])
+        #print('\n\n\n\n')
+        #time.sleep(2.0) 
 
         #vec(rho) = SUM_i f_i -> SUMS EACH DISTRIBUTION MATRIX TOGETHER
         DENSITY=sum(f)  # Note: denotes sum over third dimension
