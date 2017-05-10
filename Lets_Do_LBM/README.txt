@@ -1,7 +1,8 @@
  2D LATTICE BOLTZMANN (LBM) SIMULATION 
 Author: Nicholas A. Battista
-Created: 11/4/2014
-Modified: 12/2/2014
+Created: 11/4/2014  (MATLAB)
+Modified: 12/2/2014 (MATLAB)
+Created: 05/05/2017 (Python3)
 
 _____________________________________________________________________________
 
@@ -16,6 +17,8 @@ c7  c4   c8
 f_i: the probability for site vec(x) to have a particle heading in
 direction i, at time t. These f_i's are called discretized probability 
 distribution functions
+
+_____________________________________________________________________________
 
 LBM Idea: 
 1. At each timestep the particle densities propogate in each direction (1-8).
