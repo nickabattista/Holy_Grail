@@ -196,8 +196,8 @@ def print_vtk_files(ctsave,U,V,vorticity,Lx,Ly,nx,ny):
     dy = Ly/(ny-1)
 
     #Go into vtk_data directory. This was throwing an error because we're already there!
-    if os.path.split(os.getcwd())[1] != 'vtk_data_test':
-        os.chdir('vtk_data_test')
+    if os.path.split(os.getcwd())[1] != 'vtk_data':
+        os.chdir('vtk_data')
 
     #Find string number for storing files
     strNUM = give_String_Number_For_VTK(ctsave)

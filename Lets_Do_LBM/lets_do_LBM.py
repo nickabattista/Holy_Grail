@@ -50,11 +50,10 @@ def print_LBM_Info():
     print('c3- c9 - c1\n')
     print('  /  |  \\  \n')
     print('c7  c4   c8\n\n')
-
     print('f_i: the probability for site vec(x) to have a particle heading in\n')
     print('direction i, at time t. These f_i''s are called discretized probability \n')
     print('distribution functions\n\n')
-
+    print('_____________________________________________________________________________\n\n')
     print('LBM Idea: \n')
     print('1. At each timestep the particle densities propogate in each direction (1-8).\n')
     print('2. An equivalent "equilibrium" density is found\n')
@@ -125,6 +124,19 @@ def give_Me_Problem_Geometry(choice,nx,ny,percentPorosity):
         deltaU = 0.01                      # Incremental increase to inlet velocity
         endTime = 2500
 
+    elif (choice=='porous1'):
+
+        #POROUS RANDOM DOMAIN
+        BOUNDs=np.random.rand(nx,ny)<(1-percentPorosity)   # Puts TRUE/FALSE's inside domain randomly if RAND value above percent
+        BOUNDs=BOUNDs.astype(int)                          # Converts Boolean matrix to matrix of 0,1's  
+        aS = int(np.ceil(nx/5))                            # Puts openings near ends of porous channel
+        aE = int(np.ceil(4*nx/5))                          # Puts openings near ends of porous channel
+        BOUNDs[0:aS,:] = 0                                 # Puts openings near ends of porous channel
+        BOUNDs[aE:,:]=0                                    # Puts openings near ends of porous channel
+        BOUNDs[0:,[0,ny-1]]=1                              # Puts "1's" on LEFT/RIGHT Boundaries
+        deltaU = 1e-7                                      # Incremental increase to inlet velocity
+        endTime = 5000
+
     '''
     elif (choice=='cylinder1'):
 
@@ -154,17 +166,7 @@ def give_Me_Problem_Geometry(choice,nx,ny,percentPorosity):
         endTime = 4000
 
 
-    elif (choice=='porous1'):
 
-        #POROUS RANDOM DOMAIN
-        BOUND=rand(nx,ny)<percentPorosity   #PUTS "1's" inside domain randomly if RAND value above percent  
-        aS = ceil(nx/5)
-        aE = ceil(4*5/nx)
-        BOUND(1:aS,:) = 0 
-        BOUND(aE:end,:)=0
-        BOUND(1:nx,[1 ny])=1                #PUTS "1's" on LEFT/RIGHT Boundaries
-        deltaU = 1e-7                       #Incremental increase to inlet velocity
-        endTime = 5000
 
     elif (choice=='porous2'):
 
@@ -346,8 +348,8 @@ def lets_do_LBM():
     #
     # Possible Choices: 'cylinder1', 'cylinder2', 'channel', 'porous1', 'porous2'
     #
-    choice = 'channel'
-    percentPorosity = 0.25  # Percent of Domain that's Porous (does not matter if not studying porous problem)
+    choice = 'porous1'
+    percentPorosity = 0.75  # Percent of Domain that's Porous (does not matter if not studying porous problem)
     BOUND, deltaU, endTime = give_Me_Problem_Geometry(choice,nx,ny,percentPorosity) #BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
     print_simulation_info(choice)
 
@@ -367,7 +369,7 @@ def lets_do_LBM():
     ctsave = 0
     # CREATE VTK DATA FOLDER
     try:
-        os.mkdir('vtk_data_test')
+        os.mkdir('vtk_data')
     except FileExistsError:
         #File already exists
         pass
