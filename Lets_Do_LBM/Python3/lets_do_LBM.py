@@ -137,6 +137,21 @@ def give_Me_Problem_Geometry(choice,nx,ny,percentPorosity):
         deltaU = 1e-7                                      # Incremental increase to inlet velocity
         endTime = 5000
 
+    elif (choice=='porous2'):
+
+        #POROUS RANDOM DOMAIN
+        BOUNDs=np.random.rand(nx,ny)<(1-percentPorosity)                 # PUTS "1's" inside domain randomly if RAND value above percent              
+        BOUNDs[np.arange(0,int(np.floor(9*nx/31)),1),:] = 0                        # PUTS "0's" to make open channels through porous structure
+        BOUNDs[np.arange(int(np.floor(7*nx/31)),int(np.ceil(9*nx/31)),1),:] = 0    # PUTS "0's" to make open channels through porous structure
+        BOUNDs[np.arange(int(np.floor(13*nx/31)),int(np.ceil(15*nx/31)),1),:] = 0  # PUTS "0's" to make open channels through porous structure
+        BOUNDs[np.arange(int(np.floor(19/31*nx)),int(np.ceil(21/31*nx)),1),:] = 0  # PUTS "0's" to make open channels through porous structure
+        BOUNDs[np.arange(int(np.floor(25/31*nx)),int(np.ceil(27/31*nx)),1),:]=0    # PUTS "0's" to make open channels through porous structure
+        BOUNDs[int(np.floor(30/31*nx)):,:] = 0                                     # PUTS "0's" to make open channels through porous structure
+        BOUNDs[0:,[0,ny-1]]= 1                                           # PUTS "1's" on LEFT/RIGHT Boundaries
+        deltaU = 1e-7                                                    # Incremental increase to inlet velocity
+        endTime = 5000
+    
+
     '''
     elif (choice=='cylinder1'):
 
@@ -348,7 +363,7 @@ def lets_do_LBM():
     #
     # Possible Choices: 'cylinder1', 'cylinder2', 'channel', 'porous1', 'porous2'
     #
-    choice = 'porous1'
+    choice = 'porous2'
     percentPorosity = 0.75  # Percent of Domain that's Porous (does not matter if not studying porous problem)
     BOUND, deltaU, endTime = give_Me_Problem_Geometry(choice,nx,ny,percentPorosity) #BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
     print_simulation_info(choice)
@@ -399,10 +414,7 @@ def lets_do_LBM():
         BOUNCEDBACK[:,5] = f[5,ON_i,ON_j]
         BOUNCEDBACK[:,6] = f[6,ON_i,ON_j]
         BOUNCEDBACK[:,7] = f[7,ON_i,ON_j]
-
-
-        #print(f[1,:,:])
-        #print('\n\n\n\n')
+        
         #time.sleep(2.0) 
 
         #vec(rho) = SUM_i f_i -> SUMS EACH DISTRIBUTION MATRIX TOGETHER
