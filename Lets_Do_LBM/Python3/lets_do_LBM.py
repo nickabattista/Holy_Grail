@@ -152,51 +152,40 @@ def give_Me_Problem_Geometry(choice,nx,ny,percentPorosity):
         endTime = 5000
     
 
-    '''
+    
     elif (choice=='cylinder1'):
 
         #CHANNEL FLOW W/ CYLINDER
-        a=repmat(-(nx-1)/2:(nx-1)/2,[ny,1]) 
-        r = floor(nx/5)
-        aR = ceil(nx/5)
-        BOUND=( a.^2+(a+aR)'.^2)<r         #PUTS "1's" within region of Cylinder
-        BOUND(1:nx,[1 ny])=1               #Puts "1's" on Left/Right Boundaries
-        deltaU = 0.01                      #Incremental increase to inlet velocity
+        a0=np.arange(-(nx-1)/2,(nx-1)/2+1,1) 
+        a = np.tile(a0,(ny,1))               # MATLAB: a=repmat(-(nx-1)/2:(nx-1)/2,[ny,1]) 
+        r = np.floor(nx/3.5)
+        aR = np.ceil(nx/3.5)
+        BOUNDs= ( a*a + (a+aR).T**2 ) < r    # PUTS "1's" within region of Cylinder
+        BOUNDs[0:,[0,ny-1]]=1                # Puts "1's" on Left/Right Boundaries
+        BOUNDs=BOUNDs.astype(int)           # Convert boolean matrix to integer matrix
+        deltaU = 0.01                        # Incremental increase to inlet velocity
         endTime = 2500
-
+    
     elif (choice=='cylinder2'):
 
         #CHANNEL FLOW W/ CYLINDER
-        a=repmat(-(nx-1)/2:(nx-1)/2,[ny,1])
-        r = floor(nx/2.5)
-        aL = floor(nx/5)
-        aR = ceil(nx/2)
+        a0=np.arange(-(nx-1)/2,(nx-1)/2+1,1) 
+        a = np.tile(a0,(ny,1))               # MATLAB: a=repmat(-(nx-1)/2:(nx-1)/2,[ny,1]) 
+        r = np.floor(nx/2.5)
+        aL = np.floor(nx/5)
+        aR = np.ceil(nx/2)
         aM = 0.3*aR
-        B1=  ( ( (a).^2+(a+3.75*aR/5)'.^2)<r )           #PUTS "1's" within region of Cylinder1
-        B2=  ( ( (a+aL/1.75).^2+(a+4*aM/5)'.^2)<r )        #PUTS "1's" within region of Cylinder2
-        B3=  ( ( (a-aL/1.75).^2+(a+4*aM/5)'.^2)<r )        #PUTS "1's" within region of Cylinder1
-        BOUND= double(B1)+double(B2)+double(B3) #PUTS together all cylinder geometry
-        BOUND(1:nx,[1 ny])=1                    #Puts "1's" on Left/Right Boundaries
-        deltaU = 0.01                           #Incremental increase to inlet velocity
+        B1=  ( ( (a)**2 + (a+3.75*aR/5).T**2)<r )           # PUTS "1's" within region of Cylinder1
+        B2=  ( ( (a+aL/1.75)**2 + (a+4*aM/5).T**2) <r )     # PUTS "1's" within region of Cylinder2
+        B3=  ( ( (a-aL/1.75)**2 + (a+4*aM/5).T**2) <r )     # PUTS "1's" within region of Cylinder1
+        BOUNDs= B1.astype(int) + B2.astype(int) + B3.astype(int)  # Convert boolean matrix to integer matrix
+        BOUNDs[0:,[0,ny-1]] = 1                             # Puts "1's" on Left/Right Boundaries
+        deltaU = 0.01                                       # Incremental increase to inlet velocity
         endTime = 4000
+    
 
 
 
-
-    elif (choice=='porous2'):
-
-        #POROUS RANDOM DOMAIN
-        BOUND=rand(nx,ny)<percentPorosity  #PUTS "1's" inside domain randomly if RAND value above percent              
-        BOUND(1:floor(9*nx/31),:) = 0                   #PUTS "0's" to make open channels through porous structure
-        BOUND(floor(7*nx/31):floor(9*nx/31),:) = 0                   #PUTS "0's" to make open channels through porous structure
-        BOUND(floor(13*nx/31):floor(15*nx/31),:) = 0                 #PUTS "0's" to make open channels through porous structure
-        BOUND(floor(19/31*nx):floor(21/31*nx),:) = 0                 #PUTS "0's" to make open channels through porous structure
-        BOUND(floor(25/31*nx):floor(27/31*nx),:)=0                   #PUTS "0's" to make open channels through porous structure
-        BOUND(floor(30/31*nx):end,:) = 0                #PUTS "0's" to make open channels through porous structure
-        BOUND(1:nx,[1 ny])=1               #PUTS "1's" on LEFT/RIGHT Boundaries
-        deltaU = 1e-7                      #Incremental increase to inlet velocity
-        endTime = 5000
-    '''
 
     return BOUNDs, deltaU, endTime
 
@@ -347,10 +336,10 @@ def lets_do_LBM():
     #
     # Simulation Parameters
     #
-    tau=0.9#0.53                           # Tau: relaxation parameter related to viscosity
+    tau=0.55 #0.9 #0.53                           # Tau: relaxation parameter related to viscosity
     density=0.01                           # Density to be used for initializing whole grid to value 1.0
     w1=4/9; w2=1/9; w3=1/36                # Weights for finding equilibrium distribution
-    nx=64; ny=64                           # Number of grid cells
+    nx=100; ny=100                         # Number of grid cells
     Lx = 1; Ly = 1                         # Size of computational domain
     dx = Lx/nx; dy = Ly/ny                 # Grid Resolutions in x and y directions, respectively
     f = density/9.0*np.ones((9,nx,ny))     # Copies density/9 into 9-matrices of size [nx,ny] -> ALLOCATION for all "DIRECTIONS"
@@ -363,7 +352,7 @@ def lets_do_LBM():
     #
     # Possible Choices: 'cylinder1', 'cylinder2', 'channel', 'porous1', 'porous2'
     #
-    choice = 'porous2'
+    choice = 'cylinder2'
     percentPorosity = 0.75  # Percent of Domain that's Porous (does not matter if not studying porous problem)
     BOUND, deltaU, endTime = give_Me_Problem_Geometry(choice,nx,ny,percentPorosity) #BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
     print_simulation_info(choice)
