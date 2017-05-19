@@ -182,6 +182,52 @@ def savevtk_vector(X, Y, filename, vectorName,dx,dy):
     #Python 3.5 automatically opens in text mode unless otherwise specified
 
 
+
+##############################################################################
+#
+# FUNCTION: prints matrix vector data to vtk formated file
+#
+##############################################################################
+
+def savevtk_points( X, filename, vectorName):
+    ''' Prints matrix vector data to vtk formated file
+    
+    Args:
+        X: Matrix of size Nx3
+        filename:
+        vectorName:'''
+
+    N = X.shape[0]
+
+    with open(filename,'w') as file:
+        file.write('# vtk DataFile Version 2.0\n')
+        file.write(vectorName+'\n')
+        file.write('ASCII\n')
+        file.write('DATASET UNSTRUCTURED_GRID\n\n')
+        file.write('POINTS {0} float\n'.format(N))
+        for ii in range(N):
+            file.write('{0:.15e} {1:.15e} {2:.15e}\n'.format(X[ii,0],X[ii,1],0))
+        file.write('\n')
+        #
+        #First: # of "Cells", Second: Total # of info inputed following
+        file.write('CELLS {0} {1}\n'.format(N,2*N))
+        for s in range(N):
+            file.write('{0} {1}\n'.format(1,s))
+        file.write('\n')
+        #
+        file.write('CELL_TYPES {0}\n'.format(N)) # N = # of "Cells"
+        for ii in range(N):
+           file.write('1 ')
+        file.write('\n')
+
+
+
+
+
+
+
+
+
 ##############################################################################
 #
 # FUNCTION: gives appropriate string number for filename in printing the
@@ -189,7 +235,7 @@ def savevtk_vector(X, Y, filename, vectorName,dx,dy):
 #
 ##############################################################################
 
-def print_vtk_files(ctsave,U,V,vorticity,Lx,Ly,nx,ny):
+def print_vtk_files(ctsave,U,V,vorticity,Lx,Ly,nx,ny,Bound_Pts):
 
     #Give spacing for grid
     dx = Lx/(nx-1) 
@@ -201,6 +247,10 @@ def print_vtk_files(ctsave,U,V,vorticity,Lx,Ly,nx,ny):
 
     #Find string number for storing files
     strNUM = give_String_Number_For_VTK(ctsave)
+
+    #Print Boundary Pts to .vtk format
+    lagPtsName = 'Bounds.'+strNUM+'.vtk'
+    savevtk_points(Bound_Pts, lagPtsName, 'Bounds')
 
     #Prints x-Velocity Component
     confName = 'uX.' + strNUM + '.vtk'

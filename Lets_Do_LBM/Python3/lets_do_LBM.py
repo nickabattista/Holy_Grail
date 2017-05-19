@@ -106,6 +106,41 @@ def print_simulation_info(choice):
         print('NOTE: each simulation creates a RANDOM porous geometry\n\n\n')
 
 
+###########################################################################
+#
+# Function to give boundary points for visualization in vtk printing.
+#
+###########################################################################
+    
+def give_Me_Boundary_Pts_For_Visualization(dx,dy,nx,ny,Lx,Ly,ON_i,ON_j):
+
+    aX = np.arange(Lx-dx,-dx,-dx)
+    xMat = np.tile(aX,[nx,1]).T           # MATLAB: xMat = repmat(Lx-dx:-dx:0,nx).T
+
+    aY = np.arange(0,Ly,dy)
+    yMat = np.tile(aY,[ny,1])             # MATLAB: yMat = repmat(0:dy:Ly,ny)
+    xBounds = xMat[ON_i,ON_j]
+    xBounds = -xBounds + Lx
+    yBounds = yMat[ON_i,ON_j]
+
+    lenX = len(xBounds)
+    Bound_Pts = np.zeros((lenX,2))
+    
+    for i in range(0,lenX):
+        Bound_Pts[i,0] = xBounds[i]
+        Bound_Pts[i,1] = yBounds[i]
+    
+    # TEST PLOTTING IN MATLAB -> CONVERT TO PYTHON ONE DAY
+    #subplot(1,2,1)
+    #image(2-BOUND') hold on
+    #subplot(1,2,2)
+    #plot(Bound_Pts(:,1),Bound_Pts(:,2),'*')
+    #pause() 
+    
+    return Bound_Pts
+
+
+
 ##########################################################################
 #
 # Function to choose what geometry to consider for the simulation
@@ -359,9 +394,11 @@ def lets_do_LBM():
 
 
     #Find Indices of NONZERO Elements, i.e., where "boundary points" are
-    ON_i,ON_j = np.nonzero(BOUND) # matrix offset of each Occupied Node e.g., A(ON_i,ON_j) ~= 0
+    ON_i,ON_j = np.nonzero(BOUND)     # matrix offset of each Occupied Node e.g., A(ON_i,ON_j) ~= 0
     BOUNCEDBACK = np.zeros((ON_i.size,8))
 
+    # Give Boundary Points For Saving Data
+    Bound_Pts = give_Me_Boundary_Pts_For_Visualization(dx,dy,nx,ny,Lx,Ly,ON_i,ON_j)
 
     #Initialization Parameters
     ts=0                              # initialize starting time to 0 (time-step)
@@ -379,10 +416,10 @@ def lets_do_LBM():
         pass
 
     # INITIALIZE DATA STORAGE #    
-    UX = np.zeros((nx,ny))                                # Initialize x-Component of Velocity
-    UY = np.zeros((nx,ny))                                # Initialize y-Component of Velocity
-    vorticity = np.zeros((nx-1,ny-1))                     # Initialize Vorticity   
-    print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny)   # Print .vtk files for initial configuration
+    UX = np.zeros((nx,ny))                                          # Initialize x-Component of Velocity
+    UY = np.zeros((nx,ny))                                          # Initialize y-Component of Velocity
+    vorticity = np.zeros((nx-1,ny-1))                               # Initialize Vorticity   
+    print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny,Bound_Pts)   # Print .vtk files for initial configuration
 
 
     #Begin time-stepping!
@@ -474,7 +511,7 @@ def lets_do_LBM():
             vorticity[0:nx-2,0:ny-2] = dUy_x - dUx_y 
 
             # print to vtk
-            print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny)
+            print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny,Bound_Pts)
             print('Simulation Time: {0:6.6f}\n'.format(ts))
         
 #### ENDS MAIN TIME-STEPPING ROUTINE #####
