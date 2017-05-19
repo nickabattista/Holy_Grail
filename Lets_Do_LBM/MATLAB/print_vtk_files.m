@@ -5,7 +5,7 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function print_vtk_files(ctsave,U,V,vorticity,Lx,Ly,nx,ny)
+function print_vtk_files(ctsave,U,V,vorticity,Lx,Ly,nx,ny,Bound_Pts)
 
 %Give spacing for grid
 dx = Lx/(nx-1); 
@@ -16,6 +16,10 @@ cd('vtk_data');
 
 %Find string number for storing files
 strNUM = give_String_Number_For_VTK(ctsave);
+
+%Print Lagrangian Pts to .vtk format
+lagPtsName = ['Bounds.' strNUM '.vtk'];
+savevtk_points(Bound_Pts, lagPtsName, 'Bounds');
 
 %Prints x-Velocity Component
 confName = ['uX.' strNUM '.vtk'];
@@ -40,6 +44,51 @@ savevtk_vector(U, V, velocityName, 'u',dx,dy)
 
 %Get out of viz_IB2d folder
 cd ..
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% FUNCTION: prints matrix vector data to vtk formated file
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function savevtk_points( X, filename, vectorName)
+
+%X is matrix of size Nx3
+
+N = length( X(:,1) );
+
+
+%TRY PRINTING THEM AS UNSTRUCTURED_GRID
+file = fopen (filename, 'w');
+fprintf(file, '# vtk DataFile Version 2.0\n');
+fprintf(file, [vectorName '\n']);
+fprintf(file, 'ASCII\n');
+fprintf(file, 'DATASET UNSTRUCTURED_GRID\n\n');
+%
+fprintf(file, 'POINTS %i float\n', N);
+for i=1:N
+    fprintf(file, '%.15e %.15e %.15e\n', X(i,1),X(i,2),0);
+end
+fprintf(file,'\n');
+%
+fprintf(file,'CELLS %i %i\n',N,2*N); %First: # of "Cells", Second: Total # of info inputed following
+for s=0:N-1
+    fprintf(file,'%i %i\n',1,s);
+end
+fprintf(file,'\n');
+%
+fprintf(file,'CELL_TYPES %i\n',N); % N = # of "Cells"
+for i=1:N
+   fprintf(file,'1 '); 
+end
+fprintf(file,'\n');
+fclose(file);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %

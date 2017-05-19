@@ -57,10 +57,23 @@ print_simulation_info(choice);
 %Find Indices of NONZERO Elements, i.e., where "boundary points" IS
 ON=find(BOUND); %matrix offset of each Occupied Node
 
-
-% Give Boundary Points For Saving Data
+% Give Boundary For Saving Data
 Bound_Pts = give_Me_Boundary_Pts_For_Visualization(dx,dy,nx,ny,Lx,Ly,ON);
-
+xMat = repmat(Lx-dx:-dx:0,nx)';
+yMat = repmat(0:dy:Ly,ny);
+xBounds = xMat(ON);
+xBounds = -xBounds + Lx;
+yBounds = yMat(ON);
+Bound_Pts = zeros(length(xBounds),2);
+for i =1:length(xBounds)
+    Bound_Pts(i,1) = xBounds(i);
+    Bound_Pts(i,2) = yBounds(i);
+end
+%subplot(1,2,1)
+%image(2-BOUND'); hold on;
+%subplot(1,2,2)
+%plot(Bound_Pts(:,1),Bound_Pts(:,2),'*');
+%pause();
 
 %Offsets Indices for the Different Directions [i.e., levels of F_i=F(:,:,i) ] for known BOUNDARY pts.
 TO_REFLECT=[ON+CI(1) ON+CI(2) ON+CI(3) ON+CI(4) ON+CI(5) ON+CI(6) ON+CI(7) ON+CI(8)];
@@ -75,7 +88,6 @@ fprintf('Simulation Time: %d\n',ts);
 % SAVING DATA TO VTK %
 print_dump = floor(endTime/50);
 ctsave = 0;
-
 % CREATE VIZ_IB2D FOLDER and VISIT FILES
 mkdir('vtk_data');
 UX = zeros(nx,ny); UY = UX; vorticity = UX(1:end-1,1:end-1);
