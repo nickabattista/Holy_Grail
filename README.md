@@ -16,6 +16,7 @@ Institution: The College of New Jersey (<a href="https://tcnj.edu/">TCNJ</a>) <b
 
 <hr> An array of fluid solver codes, including a Projection Method, Pseudo-Spectral (FFT), Lattice Boltzmann, and the Panel Method with implementations in both MATLAB and Python3  </hr>
 
+<hr> </hr>
 
 <H3>Video Tutorials Coming Soon! </H3>
 
