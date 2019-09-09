@@ -1,6 +1,6 @@
 <hr>  </hr>
 
-<a href="https://github.com/nickabattista/Holy_Grail"><img src="https://static.wixstatic.com/media/50968c_da9cf1876a5443e5abd26133916162bb~mv2.png/v1/fill/w_366,h_360,al_c,q_80,usm_0.66_1.00_0.01/visit0123.webp" align="right" height="450" width="450" ></a>
+<a href="https://github.com/nickabattista/Holy_Grail"><img src="https://static.wixstatic.com/media/50968c_da9cf1876a5443e5abd26133916162bb~mv2.png/v1/fill/w_366,h_360,al_c,q_80,usm_0.66_1.00_0.01/visit0123.webp" align="right" height="250" width="250" ></a>
 <H1> Holy Grail </H1>
 
 Author: Nicholas A. Battista, Ph.D. <br>
