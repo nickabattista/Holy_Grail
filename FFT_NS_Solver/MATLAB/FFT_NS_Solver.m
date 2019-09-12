@@ -35,8 +35,8 @@ print_FFT_NS_Info();
 % Simulation Parameters
 %
 nu=1.0e-3;  % kinematic viscosity
-NX = 512;   % # of grid points in x
-NY = 512;   % # of grid points in y
+NX = 256;   % # of grid points in x
+NY = 256;   % # of grid points in y
 LX = 1;     % 'Length' of x-Domain
 LY = 1;     % 'Length' of y-Domain
 
@@ -44,7 +44,7 @@ LY = 1;     % 'Length' of y-Domain
 % Choose initial vorticity state
 % Choices:  'half', 'qtrs', 'rand' ,'bubble1', 'bubble2', 'bubbleSplit'
 %
-choice='bubble2';
+choice='half';
 [vort_hat,dt,tFinal,plot_dump] = please_Give_Initial_Vorticity_State(choice,NX,NY);
 
 %
@@ -153,20 +153,38 @@ function [vort_hat,dt,tFinal,plot_dump] = please_Give_Initial_Vorticity_State(ch
 
 if strcmp(choice,'half')
     
+    buff = 10;       % # of grid cells around each vortex region (make sure even)
     vort=zeros(NX,NY);
-    vort(1:NX/2,:)=1;
-    dt=5e-2;        % time step
-    tFinal = 1000;  % final time
-    plot_dump=100;  % interval for plots
+    vort(1+buff:end-buff,1+buff:NY/2-buff/2)=0.1;
+    vort(1+buff:end-buff,NY/2+1+buff/2:end-buff)=0.1;
+    dt=1e-2;        % time step
+    tFinal = 5;     % final time
+    plot_dump=5;    % interval for plots
 
 elseif strcmp(choice,'qtrs')
     
-    vort = zeros(NX,NY);
-    vort(1:NX/2,1:NY/2)=1;
-    vort(NX/2+1:end,NY/2+1:end)=1;
+    %
+    % CASE: Flows go in same direction
+    %
+    vort = -0.1*ones(NX,NY);
+    vort(1:NX/2,1:NY/2)=0.1;
+    vort(NX/2+1:end,NY/2+1:end)=0.1;
     dt=1e-2;      % time step
-    tFinal=2.5;   % final time
+    tFinal=5;   % final time
     plot_dump=5;  % interval for plots'
+    
+    %
+    % CASE: Qtr-boundaries (more mixing)
+    %
+    %buff = 5;
+    %vort = 0.1*(2*rand(NX,NY)-1);
+    %vort(1+buff:NX/2-buff,1+buff:NY/2-buff)=0.1;
+    %vort(1+buff:NX/2-buff,NY/2+1+buff:end-buff)=0.1;
+    %vort(NX/2+1+buff:end,1+buff:NY/2-buff)=-0.1;
+    %vort(NX/2+1+buff:end,NY/2+1+buff:end-buff)=-0.1;
+    %dt=1e-2;      % time step
+    %tFinal=5;     % final time
+    %plot_dump=5;  % interval for plots'
    
 elseif strcmp(choice,'rand')
     
@@ -292,16 +310,16 @@ function [kMatx, kMaty, kLaplace] = please_Give_Wavenumber_Matrices(NX,NY)
 kMatx = zeros(NX,NY);
 kMaty = kMatx;
 
-rowVec = [0:NX/2 (-NX/2+1):1:-1];
-colVec = [0:NY/2 (-NY/2+1):1:-1]';
+rowVec = [0:NY/2 (-NY/2+1):1:-1];
+colVec = [0:NX/2 (-NX/2+1):1:-1]';
 
 %Makes wavenumber matrix in x
-for i=1:NY
+for i=1:NX
    kMatx(i,:) = 1i*rowVec;
 end
 
 %Makes wavenumber matrix in y (NOTE: if Nx=Ny, kMatx = kMaty')
-for j=1:NX
+for j=1:NY
    kMaty(:,j) = 1i*colVec; 
 end
 
@@ -323,7 +341,7 @@ kVecY = ky(:,1);        %Gives column vector from ky
 for i = 1:NX
     for j = 1:NY
         if ( i+j > 2 )
-            psi_hat(i,j) = -w_hat(i,j)/( ( kVecX(i)^2+ kVecY(j)^2 ) ); % "inversion step"
+            psi_hat(i,j) = -w_hat(i,j)/( ( kVecX(j)^2+ kVecY(i)^2 ) ); % "inversion step"
         end
     end
 end
@@ -463,6 +481,7 @@ elseif strcmp(choice,'bubbleSplit')
 elseif strcmp(choice,'qtrs')
     
     fprintf('You are simulating 4 squares of differing vorticity\n');
+    fprintf('Try changing the initial vorticity in each square to see how the dynamics change\n');
     fprintf('Try changing the kinematic viscosity to see how the flow changes\n');
     fprintf('_________________________________________________________________________\n\n');
 
