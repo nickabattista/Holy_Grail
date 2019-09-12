@@ -75,7 +75,7 @@ def print_Simulation_Info(choice):
     if (choice == 'bubble1' ):
 
         print('You are simulating one dense region of CW vorticity in a bed of random vorticity values\n')
-        print('Try changing the dynamic viscosity to see how flow changes\n')
+        print('Try changing the kinematic viscosity to see how flow changes\n')
         print('_________________________________________________________________________\n\n')
 
 
@@ -83,7 +83,7 @@ def print_Simulation_Info(choice):
 
         print('You are simulating three nested regions of Vorticity (CW,CCW,CW) in a bed of random vorticity values\n')
         print('Try changing the position of the nested vortices in the "please_Give_Initial_State" function\n')
-        print('Try changing the dynamic viscosity to see how flow changes\n')
+        print('Try changing the kinematic viscosity to see how flow changes\n')
         print('_________________________________________________________________________\n\n')
 
 
@@ -91,28 +91,28 @@ def print_Simulation_Info(choice):
 
         print('You are simulating two vortices which are very close\n')
         print('Try changing the initial vorticity distribution on the left or right side\n')
-        print('Try changing the dynamic viscosity to see how the flow changes\n')
+        print('Try changing the kinematic viscosity to see how the flow changes\n')
         print('_________________________________________________________________________\n\n')
 
 
     elif ( choice == 'qtrs' ):
 
         print('You are simulating 4 squares of differing vorticity\n')
-        print('Try changing the dynamic viscosity to see how the flow changes\n')
+        print('Try changing the kinematic viscosity to see how the flow changes\n')
         print('_________________________________________________________________________\n\n')
 
 
     elif (choice == 'half' ):
 
         print('You are simulating two half planes w/ opposite sign vorticity\n')
-        print('Try changing the dynamic viscosity to see how the flow changes\n')
+        print('Try changing the kinematic viscosity to see how the flow changes\n')
         print('_________________________________________________________________________\n\n')
 
 
     elif (choice == 'rand'):
 
         print('You are simulating a field of random vorticity values\n')
-        print('Try changing the dynamic viscosity to see how the flow changes\n')
+        print('Try changing the kinematic viscosity to see how the flow changes\n')
         print('_________________________________________________________________________\n\n')
 
 
@@ -131,17 +131,17 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
 
     if ( choice == 'half' ):
 
-        vort=np.zeros(NX,NY)
-        vort[0:NX/2-1,:]=1
+        vort=np.zeros([NX,NY])
+        vort[:,0:int(NX/2)-1]=1
         dt=5e-2        # time step
         tFinal = 1000  # final time
         plot_dump=100  # interval for plots
 
     elif ( choice == 'qtrs' ):
 
-        vort = np.zeros(NX,NY)
-        vort[1:NX/2-1,1:NY/2-1]=1
-        vort[NX/2:end,NY/2:end]=1
+        vort = np.zeros([NX,NY])
+        vort[1:int(NX/2)-1,1:int(NY/2)-1]=1
+        vort[int(NX/2):,int(NY/2):]=1
         dt=1e-2      # time step
         tFinal=2.5   # final time
         plot_dump=5  # interval for plots'
@@ -157,9 +157,12 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
     '''
     elseif strcmp(choice,'bubble1')
 
+        #radius of bubble (centered in middle of domain, given in terms of mesh widths)
+        radius = 0.25*(NX/2)^2;
+
         vort = 0.25*rand(NX,NY)-0.50
         a=repmat(-NX/4+1:NX/4,[NY/2 1])
-        b1 = ( (a-1).^2 +  (a+1)'.^2 ) < 1024
+        b1 = ( (a-1).^2 +  (a+1)'.^2 ) < radius
         b1 = double(b1)
         [r1,c1]=find(b1==1)
         b1 = 0.5*rand(NX/2,NY/2)-0.25
@@ -174,9 +177,12 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
 
     elseif strcmp(choice,'bubbleSplit')
 
+        # radius of bubble (centered in middle of domain, given in terms of mesh widths)
+        radius = 0.25*(NX/2)^2;
+
         vort = 0.5*rand(NX,NY)-0.25
         a=repmat(-NX/4+1:NX/4,[NY/2 1])
-        b1 = ( (a-1).^2 +  (a+1)'.^2 ) < 1024
+        b1 = ( (a-1).^2 +  (a+1)'.^2 ) < radius
         b1 = double(b1)
         [r1,c1]=find(b1==1)
         b1 = 0.5*rand(NX/2,NY/2)-0.25
@@ -195,13 +201,18 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
 
     elseif strcmp(choice,'bubble2')
 
+        # radius of bubble (centered in middle of domain, given in terms of mesh widths)
+        radius1 = 0.25*(NX/2)^2;
+        radius2 = 0.175*(NX/2)^2;
+        radius3 = 0.10*(NX/2)^2;
+
         #Initialize vort matrix
         vort = 2*rand(NX,NY)-1
 
-        ex = 2 #Makes sure full bubbles
-        sL = 5 #shift left
+        ex = 0; #Makes sure full bubbles
+        sL = 0; #shift left
         a1=repmat(-NX/4+(1-ex):NX/4,[NY/2+ex 1])
-        b1 = ( (a1-1).^2 +  (a1+1)'.^2 ) < NX*8+NX/1.5
+        b1 = ( (a1-1).^2 +  (a1+1)'.^2 ) < radius1 #NX*8+NX/1.5
         b1 = double(b1)
         nZ = find(b1)
         b1(nZ) = 0.8 
@@ -211,9 +222,10 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         end
         vort(NX/4+(1-ex):3*NX/4,NY/4+(1-ex)-sL:3*NY/4-sL) = b1
 
-
+        ex = 0;  #Makes sure full bubbles
+        sL = 20; #shift left
         a2=repmat(-NX/8+(1-ex):NX/8,[NY/4+ex 1])
-        b2 = ( (a2-1).^2 +  (a2+1)'.^2 ) < 2*NX+NX/0.75
+        b2 = ( (a2-1).^2 +  (a2+1)'.^2 ) < radius2 #2*NX+NX/0.75
         b2 = double(b2)
         nZ = find(b2)
         b2(nZ) = -1.0 
@@ -221,11 +233,14 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         for i=1:length(r2)
             b2(r2(i),c2(i))=  1.0 
         end
-        vort(3*NX/8+(1-ex):5*NX/8,3*NY/8+(1-ex):5*NY/8) = b2
+        vort(3*NX/8+(1-ex):5*NX/8,3*NY/8+(1-ex)-sL:5*NY/8-sL) = b2
 
-        sR = 4 #shift right / down
+
+        ex = 2; #Makes sure full bubbles
+        sR = 8; #shift right
+        sD = 25;#shift down        
         a3=repmat(-NX/16+(1-ex):NX/16,[NY/8+ex 1])
-        b3 = ( (a3-1).^2 +  (a3+1)'.^2 ) < NX/2
+        b3 = ( (a3-1).^2 +  (a3+1)'.^2 ) < radius3 #NX/2
         b3 = double(b3)
         nZ=find(b3)
         b3(nZ)= 1.0 
@@ -233,7 +248,7 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         for j=1:length(r3)
             b3(r3(j),c3(j)) =  -1.0 
         end
-        vort(7*NX/16+(1-ex)-sR:9*NX/16-sR,7*NY/16+(1-ex)+sR:9*NY/16+sR) = b3
+        vort(7*NX/16+(1-ex)-sD:9*NX/16-sD,7*NY/16+(1-ex)+sR:9*NY/16+sR) = b3
 
         dt = 1e-2      # time step
         tFinal = 30    # final time
@@ -368,7 +383,7 @@ def FFT_NS_Solver():
     #
     # Simulation Parameters
     #
-    nu=1.0e-3  # dynamic viscosity
+    nu=1.0e-3  # kinematic viscosity
     NX = 256   # # of grid points in x
     NY = 256   # # of grid points in y
     LX = 1     # 'Length' of x-Domain
@@ -378,8 +393,8 @@ def FFT_NS_Solver():
     # Choose initial vorticity state
     # Choices:  'half', 'qtrs', 'rand' ,'bubble1', 'bubble2', 'bubbleSplit'
     #
-    choice='rand'
-    [vort_hat,dt,tFinal,plot_dump] = please_Give_Initial_Vorticity_State(choice,NX,NY)
+    choice='qtrs'
+    vort_hat,dt,tFinal,plot_dump = please_Give_Initial_Vorticity_State(choice,NX,NY)
 
     #
     # Initialize wavenumber storage for fourier exponentials
