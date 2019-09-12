@@ -3,9 +3,9 @@
 
  Author: Nicholas A. Battista
  Created: Novermber 29, 2014 (MATLAB)
- Modified: December 5, 2014 (MATLAB)
  Created: April 27, 2017 (Python 3)
- 
+ Modified: September 11, 2019 (MATLAB + Python)
+
  Equations of Motion:
  D (Vorticity) /Dt = nu*Laplacian(Vorticity)  
  Laplacian(Psi) = - Vorticity                                                       
