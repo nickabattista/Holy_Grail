@@ -143,7 +143,7 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         vort[int(NX/2)+0+int(buff/2):-buff,0+buff:-buff]=1
         dt=1e-2        # time step
         tFinal = 5     # final time
-        plot_dump=10   # interval for plots
+        plot_dump=20   # interval for plots
 
     elif ( choice == 'qtrs' ):
 
@@ -156,7 +156,7 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         vort[int(NX/2):,int(NY/2):]=0.25
         dt=1e-2      # time step
         tFinal=5   # final time
-        plot_dump=10  # interval for plots'
+        plot_dump=20  # interval for plots'
 
     elif ( choice == 'rand' ):
 
@@ -412,16 +412,16 @@ def FFT_NS_Solver():
     # Simulation Parameters
     #
     nu=1.0e-3  # kinematic viscosity
-    NX = 256   # # of grid points in x
+    NX = 512   # # of grid points in x
     NY = 256   # # of grid points in y
     LX = 1     # 'Length' of x-Domain
-    LY = 1   # 'Length' of y-Domain
+    LY = 0.5   # 'Length' of y-Domain
 
     #
     # Choose initial vorticity state
-    # Choices:  'half', 'qtrs', 'rand' ,'bubble1', 'bubble2', 'bubbleSplit'
+    # Choices:  'half', 'qtrs', 'rand' (to be implemented: 'bubble1', 'bubble2', 'bubbleSplit', see MATLAB version)
     #
-    choice='qtrs'
+    choice='half'
     vort_hat,dt,tFinal,plot_dump = please_Give_Initial_Vorticity_State(choice,NX,NY)
 
     #

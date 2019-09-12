@@ -35,10 +35,10 @@ print_FFT_NS_Info();
 % Simulation Parameters
 %
 nu=1.0e-3;  % kinematic viscosity
-NX = 256;   % # of grid points in x
+NX = 512;   % # of grid points in x
 NY = 256;   % # of grid points in y
 LX = 1;     % 'Length' of x-Domain
-LY = 1;     % 'Length' of y-Domain
+LY = 0.5;   % 'Length' of y-Domain
 
 %
 % Choose initial vorticity state
@@ -77,7 +77,8 @@ for n=0:nTot      %Enter Time-Stepping Loop!
         vort_real=real(ifft2(vort_hat));
 
         % Save .vtk data!
-        print_vtk_files(ctsave,u',v',vort_real',LX,LY,NX,NY);
+        % Note: switch order of u and v in this function bc of notation-> f(x,y) here rather than matrix convention of y(row,col) w/ y=row, x=col
+        print_vtk_files(ctsave,v,u,vort_real,LX,LY,NX,NY);
    
     else
     
@@ -132,7 +133,8 @@ for n=0:nTot      %Enter Time-Stepping Loop!
             vort_real=real(ifft2(vort_hat));
 
             % Save .vtk data!
-            print_vtk_files(ctsave,u',v',vort_real',LX,LY,NX,NY);
+            % Note: switch order of u and v in this function bc of notation-> f(x,y) here rather than matrix convention of y(row,col) w/ y=row, x=col
+            print_vtk_files(ctsave,v,u,vort_real,LX,LY,NX,NY);
 
             % Plot simulation time
             fprintf('Simulation Time: %d\n',t);
@@ -153,25 +155,33 @@ function [vort_hat,dt,tFinal,plot_dump] = please_Give_Initial_Vorticity_State(ch
 
 if strcmp(choice,'half')
     
-    buff = 10;       % # of grid cells around each vortex region (make sure even)
+    %
+    % USE RECTANGLE: Lx = 2Ly, Nx = 2Ny
+    %
+    
+    buff = 4;       % # of grid cells around each vortex region (make sure even)
     vort=zeros(NX,NY);
-    vort(1+buff:end-buff,1+buff:NY/2-buff/2)=0.1;
-    vort(1+buff:end-buff,NY/2+1+buff/2:end-buff)=0.1;
+    vort(1+buff:NX/2-buff/2,1+buff:end-buff)=1;
+    vort(NX/2+1+buff/2:end-buff,1+buff:end-buff)=1;
     dt=1e-2;        % time step
     tFinal = 5;     % final time
-    plot_dump=5;    % interval for plots
+    plot_dump=20;   % interval for plots
 
 elseif strcmp(choice,'qtrs')
     
     %
+    % SQUARE: Lx = Ly, Nx = Ny
+    %
+    
+    %
     % CASE: Flows go in same direction
     %
-    vort = -0.1*ones(NX,NY);
-    vort(1:NX/2,1:NY/2)=0.1;
-    vort(NX/2+1:end,NY/2+1:end)=0.1;
+    vort = -0.25*ones(NX,NY);
+    vort(1:NX/2,1:NY/2)=0.25;
+    vort(NX/2+1:end,NY/2+1:end)=0.25;
     dt=1e-2;      % time step
     tFinal=5;   % final time
-    plot_dump=5;  % interval for plots'
+    plot_dump=20;  % interval for plots'
     
     %
     % CASE: Qtr-boundaries (more mixing)
@@ -188,12 +198,20 @@ elseif strcmp(choice,'qtrs')
    
 elseif strcmp(choice,'rand')
     
+    %
+    % Any domain is fine.
+    %
+    
     vort = 2*rand(NX,NY)-1;
     dt=1e-1;       % time step
     tFinal = 1000; % final time
     plot_dump=25;  % interval for plots
 
 elseif strcmp(choice,'bubble1')
+    
+    %
+    % SQUARE: Lx = Ly, Nx = Ny
+    %
     
     % radius of bubble (centered in middle of domain, given in terms of mesh widths)
     radius = 0.25*(NX/2)^2;
@@ -214,6 +232,10 @@ elseif strcmp(choice,'bubble1')
     plot_dump=10; % interval for plots
     
 elseif strcmp(choice,'bubbleSplit')
+
+    %
+    % SQUARE: Lx = Ly, Nx = Ny
+    %
     
     % radius of bubble (centered in middle of domain, given in terms of mesh widths)
     radius = 0.25*(NX/2)^2;
@@ -238,6 +260,10 @@ elseif strcmp(choice,'bubbleSplit')
     plot_dump=10; % interval for plots
     
 elseif strcmp(choice,'bubble2')
+    
+    %
+    % SQUARE: Lx = Ly, Nx = Ny
+    %
     
     % radius of bubble (centered in middle of domain, given in terms of mesh widths)
     radius1 = 0.25*(NX/2)^2;
