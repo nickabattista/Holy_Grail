@@ -11,7 +11,7 @@ function print_vtk_files(ctsave,U,V,vorticity,Lx,Ly,nx,ny)
 dx = Lx/(nx-1); 
 dy = Ly/(ny-1);
 
-%Go into viz_IB2d directory
+%Go into vtk_data directory
 cd('vtk_data');
 
 %Find string number for storing files
@@ -38,7 +38,7 @@ savevtk_scalar(vorticity, confName, 'Omega',dx,dy);
 velocityName = ['u.' strNUM '.vtk'];
 savevtk_vector(U, V, velocityName, 'u',dx,dy)
 
-%Get out of viz_IB2d folder
+%Get out of vtk_data folder
 cd ..
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -6,7 +6,7 @@ function FFT_NS_Solver()
 %
 % Author: Nicholas A. Battista
 % Created: Novermber 29, 2014
-% Modified: September 11, 2019
+% Modified: Se, 2014
 % 
 % Equations of Motion:
 % D (Vorticity) /Dt = nu*Laplacian(Vorticity)  
@@ -34,7 +34,7 @@ print_FFT_NS_Info();
 %
 % Simulation Parameters
 %
-nu=1.0e-3;  % kinematic viscosity
+nu=1.0e-3;  % dynamic viscosity
 NX = 512;   % # of grid points in x
 NY = 512;   % # of grid points in y
 LX = 1;     % 'Length' of x-Domain
@@ -177,12 +177,9 @@ elseif strcmp(choice,'rand')
 
 elseif strcmp(choice,'bubble1')
     
-    % radius of bubble (centered in middle of domain, given in terms of mesh widths)
-    radius = 0.25*(NX/2)^2;
-    
     vort = 0.25*rand(NX,NY)-0.50;
     a=repmat(-NX/4+1:NX/4,[NY/2 1]);
-    b1 = ( (a-1).^2 +  (a+1)'.^2 ) < radius; %1024
+    b1 = ( (a-1).^2 +  (a+1)'.^2 ) < 1024;
     b1 = double(b1);
     [r1,c1]=find(b1==1);
     b1 = 0.5*rand(NX/2,NY/2)-0.25;
@@ -192,17 +189,14 @@ elseif strcmp(choice,'bubble1')
     vort(NX/4+1:3*NX/4,NY/4+1:3*NY/4) = b1;
     
     dt=5e-3;      % time step
-    tFinal = 7.5; % final time
+    tFinal = 7.5;   % final time
     plot_dump=10; % interval for plots
     
 elseif strcmp(choice,'bubbleSplit')
     
-    % radius of bubble (centered in middle of domain, given in terms of mesh widths)
-    radius = 0.25*(NX/2)^2;
-    
     vort = 0.5*rand(NX,NY)-0.25;
     a=repmat(-NX/4+1:NX/4,[NY/2 1]);
-    b1 = ( (a-1).^2 +  (a+1)'.^2 ) < radius;
+    b1 = ( (a-1).^2 +  (a+1)'.^2 ) < 1024;
     b1 = double(b1);
     [r1,c1]=find(b1==1);
     b1 = 0.5*rand(NX/2,NY/2)-0.25;
@@ -221,18 +215,13 @@ elseif strcmp(choice,'bubbleSplit')
     
 elseif strcmp(choice,'bubble2')
     
-    % radius of bubble (centered in middle of domain, given in terms of mesh widths)
-    radius1 = 0.25*(NX/2)^2;
-    radius2 = 0.175*(NX/2)^2;
-    radius3 = 0.10*(NX/2)^2;
-    
     %Initialize vort matrix
     vort = 2*rand(NX,NY)-1;
 
-    ex = 0; %Makes sure full bubbles
-    sL = 0; %shift left
+    ex = 2; %Makes sure full bubbles
+    sL = 5; %shift left
     a1=repmat(-NX/4+(1-ex):NX/4,[NY/2+ex 1]);
-    b1 = ( (a1-1).^2 +  (a1+1)'.^2 ) < radius1;%8*NX+ 2/3*NX;
+    b1 = ( (a1-1).^2 +  (a1+1)'.^2 ) < NX*8+NX/1.5;
     b1 = double(b1);
     nZ = find(b1);
     b1(nZ) = 0.8; 
@@ -242,10 +231,9 @@ elseif strcmp(choice,'bubble2')
     end
     vort(NX/4+(1-ex):3*NX/4,NY/4+(1-ex)-sL:3*NY/4-sL) = b1;
 
-    ex = 0;  %Makes sure full bubbles
-    sL = 20; %shift left
+    
     a2=repmat(-NX/8+(1-ex):NX/8,[NY/4+ex 1]);
-    b2 = ( (a2-1).^2 +  (a2+1)'.^2 ) < radius2; %2*NX+NX/0.75;
+    b2 = ( (a2-1).^2 +  (a2+1)'.^2 ) < 2*NX+NX/0.75;
     b2 = double(b2);
     nZ = find(b2);
     b2(nZ) = -1.0; 
@@ -253,13 +241,11 @@ elseif strcmp(choice,'bubble2')
     for i=1:length(r2)
         b2(r2(i),c2(i))=  1.0; 
     end
-    vort(3*NX/8+(1-ex):5*NX/8,3*NY/8+(1-ex)-sL:5*NY/8-sL) = b2;
+    vort(3*NX/8+(1-ex):5*NX/8,3*NY/8+(1-ex):5*NY/8) = b2;
    
-    ex = 2; %Makes sure full bubbles
-    sR = 8; %shift right
-    sD = 25;%shift down
+    sR = 4; %shift right / down
     a3=repmat(-NX/16+(1-ex):NX/16,[NY/8+ex 1]);
-    b3 = ( (a3-1).^2 +  (a3+1)'.^2 ) < radius3;%NX/2;
+    b3 = ( (a3-1).^2 +  (a3+1)'.^2 ) < NX/2;
     b3 = double(b3);
     nZ=find(b3);
     b3(nZ)= 1.0; 
@@ -267,7 +253,7 @@ elseif strcmp(choice,'bubble2')
     for j=1:length(r3)
         b3(r3(j),c3(j)) =  -1.0; 
     end
-    vort(7*NX/16+(1-ex)-sD:9*NX/16-sD,7*NY/16+(1-ex)+sR:9*NY/16+sR) = b3;
+    vort(7*NX/16+(1-ex)-sR:9*NX/16-sR,7*NY/16+(1-ex)+sR:9*NY/16+sR) = b3;
     
     dt = 1e-2;      % time step
     tFinal = 30;    % final time
@@ -440,7 +426,7 @@ function print_Simulation_Info(choice)
 if strcmp(choice,'bubble1')
    
     fprintf('You are simulating one dense region of CW vorticity in a bed of random vorticity values\n');
-    fprintf('Try changing the kinematic viscosity to see how flow changes\n');
+    fprintf('Try changing the dynamic viscosity to see how flow changes\n');
     fprintf('_________________________________________________________________________\n\n');
 
     
@@ -448,7 +434,7 @@ elseif strcmp(choice,'bubble2')
     
     fprintf('You are simulating three nested regions of Vorticity (CW,CCW,CW) in a bed of random vorticity values\n');
     fprintf('Try changing the position of the nested vortices in the "please_Give_Initial_State" function\n');
-    fprintf('Try changing the kinematic viscosity to see how flow changes\n');
+    fprintf('Try changing the dynamic viscosity to see how flow changes\n');
     fprintf('_________________________________________________________________________\n\n');
 
 
@@ -456,28 +442,28 @@ elseif strcmp(choice,'bubbleSplit')
     
     fprintf('You are simulating two vortices which are very close\n');
     fprintf('Try changing the initial vorticity distribution on the left or right side\n');
-    fprintf('Try changing the kinematic viscosity to see how the flow changes\n');
+    fprintf('Try changing the dynamic viscosity to see how the flow changes\n');
     fprintf('_________________________________________________________________________\n\n');
 
     
 elseif strcmp(choice,'qtrs')
     
     fprintf('You are simulating 4 squares of differing vorticity\n');
-    fprintf('Try changing the kinematic viscosity to see how the flow changes\n');
+    fprintf('Try changing the dynamic viscosity to see how the flow changes\n');
     fprintf('_________________________________________________________________________\n\n');
 
     
 elseif strcmp(choice,'half')
     
     fprintf('You are simulating two half planes w/ opposite sign vorticity\n');
-    fprintf('Try changing the kinematic viscosity to see how the flow changes\n');
+    fprintf('Try changing the dynamic viscosity to see how the flow changes\n');
     fprintf('_________________________________________________________________________\n\n');
 
 
 elseif strcmp(choice,'rand')
    
     fprintf('You are simulating a field of random vorticity values\n');
-    fprintf('Try changing the kinematic viscosity to see how the flow changes\n');
+    fprintf('Try changing the dynamic viscosity to see how the flow changes\n');
     fprintf('_________________________________________________________________________\n\n');
 
      
