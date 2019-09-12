@@ -42,7 +42,7 @@ def print_FFT_NS_Info():
     print(' formulation using a pseudo-spectral approach w/ FFT \n\n')
     print(' Author: Nicholas A. Battista \n')
     print(' Created: Novermber 29, 2014 \n')
-    print(' Modified: December 5, 2014 \n\n')
+    print(' Modified: September 11, 2019 \n\n')
     print(' Equations of Motion: \n')
     print(' D (Vorticity) /Dt = nu*Laplacian(Vorticity)  \n')
     print(' Laplacian(Psi) = - Vorticity                 \n\n')                                     
@@ -98,6 +98,7 @@ def print_Simulation_Info(choice):
     elif ( choice == 'qtrs' ):
 
         print('You are simulating 4 squares of differing vorticity\n')
+        print('Try changing the initial vorticity in each square to see how the dynamics change\n')
         print('Try changing the kinematic viscosity to see how the flow changes\n')
         print('_________________________________________________________________________\n\n')
 
@@ -105,6 +106,7 @@ def print_Simulation_Info(choice):
     elif (choice == 'half' ):
 
         print('You are simulating two half planes w/ opposite sign vorticity\n')
+        print('Try changing the initial vorticity on each side to see how the dynamics change\n')
         print('Try changing the kinematic viscosity to see how the flow changes\n')
         print('_________________________________________________________________________\n\n')
 
@@ -131,22 +133,36 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
 
     if ( choice == 'half' ):
 
+        #
+        # USE RECTANGLE: Lx = 2Ly, Nx = 2Ny
+        #
+
+        buff = 4 # the # of grid cells around each vortex region (make sure even)
         vort=np.zeros([NX,NY])
-        vort[:,0:int(NX/2)-1]=1
-        dt=5e-2        # time step
-        tFinal = 1000  # final time
-        plot_dump=100  # interval for plots
+        vort[0+buff:int(NX/2)-int(buff/2),0+buff:-buff]=1
+        vort[int(NX/2)+0+int(buff/2):-buff,0+buff:-buff]=1
+        dt=1e-2        # time step
+        tFinal = 5     # final time
+        plot_dump=10   # interval for plots
 
     elif ( choice == 'qtrs' ):
 
-        vort = np.zeros([NX,NY])
-        vort[1:int(NX/2)-1,1:int(NY/2)-1]=1
-        vort[int(NX/2):,int(NY/2):]=1
+        #
+        # USE SQUARE: Lx = Ly, Nx = Ny
+        #
+
+        vort = -0.25*np.ones([NX,NY])
+        vort[1:int(NX/2)-1,1:int(NY/2)-1]=0.25
+        vort[int(NX/2):,int(NY/2):]=0.25
         dt=1e-2      # time step
-        tFinal=2.5   # final time
-        plot_dump=5  # interval for plots'
+        tFinal=5   # final time
+        plot_dump=10  # interval for plots'
 
     elif ( choice == 'rand' ):
+
+        #
+        # Any domain is fine, as long as Lx/Nx = Ly/Ny
+        #
 
         vort = 2*np.random.rand(NX,NY)-1
         dt=1e-1       # time step
@@ -156,6 +172,10 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
     # WILL WORK ON OTHER EXAMPLES ONCE CODE IS UP AND RUNNING!
     '''
     elseif strcmp(choice,'bubble1')
+
+        #
+        # USE SQUARE: Lx = Ly, Nx = Ny
+        #
 
         #radius of bubble (centered in middle of domain, given in terms of mesh widths)
         radius = 0.25*(NX/2)^2;
@@ -176,6 +196,10 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         plot_dump=10 # interval for plots
 
     elseif strcmp(choice,'bubbleSplit')
+
+        #
+        # USE SQUARE: Lx = Ly, Nx = Ny
+        #
 
         # radius of bubble (centered in middle of domain, given in terms of mesh widths)
         radius = 0.25*(NX/2)^2;
@@ -200,6 +224,10 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         plot_dump=10 # interval for plots
 
     elseif strcmp(choice,'bubble2')
+
+        #
+        # USE SQUARE: Lx = Ly, Nx = Ny
+        #
 
         # radius of bubble (centered in middle of domain, given in terms of mesh widths)
         radius1 = 0.25*(NX/2)^2;
@@ -276,15 +304,15 @@ def please_Give_Wavenumber_Matrices(NX,NY):
     kMatx = np.zeros((NX,NY),dtype=np.complex_)
     kMaty = np.zeros((NX,NY),dtype=np.complex_)
 
-    rowVec = np.concatenate( ( range(0,int(NX/2)+1) , -np.arange(int(NX/2)-1,0,-1) ), axis=0)
-    colVec = np.concatenate( ( range(0,int(NY/2)+1) , -np.arange(int(NY/2)-1,0,-1) ), axis=0)
+    rowVec = np.concatenate( ( range(0,int(NY/2)+1) , -np.arange(int(NY/2)-1,0,-1) ), axis=0)
+    colVec = np.concatenate( ( range(0,int(NX/2)+1) , -np.arange(int(NX/2)-1,0,-1) ), axis=0)
 
     #Makes wavenumber matrix in x
-    for i in range(1,NY+1):
+    for i in range(1,NX+1):
         kMatx[i-1,:] = 1j*rowVec  
     
     #Makes wavenumber matrix in y (NOTE: if Nx=Ny, kMatx = kMaty')
-    for j in range(1,NX+1):
+    for j in range(1,NY+1):
         kMaty[:,j-1] = 1j*colVec 
         
     # Laplacian in Fourier space
@@ -310,7 +338,7 @@ def please_Solve_Poission(w_hat,kx,ky,NX,NY):
     for i in range(1,NX+1):
         for j in range(1,NY+1):
             if ( i+j > 2 ):
-                psi_hat[i-1,j-1] = -w_hat[i-1,j-1] / ( ( kVecX[i-1]**2 + kVecY[j-1]**2 ) ) # "inversion step"
+                psi_hat[i-1,j-1] = -w_hat[i-1,j-1] / ( ( kVecX[j-1]**2 + kVecY[i-1]**2 ) ) # "inversion step"
 
     return psi_hat
 
@@ -355,7 +383,7 @@ def FFT_NS_Solver():
 #
 # Author: Nicholas A. Battista
 # Created: Novermber 29, 2014
-# Modified: December 5, 2014
+# Modified: September 11, 2019
 # 
 # Equations of Motion:
 # D (Vorticity) /Dt = nu*Laplacian(Vorticity)  
@@ -387,7 +415,7 @@ def FFT_NS_Solver():
     NX = 256   # # of grid points in x
     NY = 256   # # of grid points in y
     LX = 1     # 'Length' of x-Domain
-    LY = 1     # 'Length' of y-Domain
+    LY = 1   # 'Length' of y-Domain
 
     #
     # Choose initial vorticity state
@@ -431,7 +459,8 @@ def FFT_NS_Solver():
             vort_real = fftpack.ifft2(vort_hat).real
 
             # Save .vtk data!
-            print_vtk_files(ctsave,u.transpose(),v.transpose(),vort_real.transpose(),LX,LY,NX,NY)
+            # Note: switch order of u and v in this function bc of notation-> f(x,y) here rather than matrix convention of y(row,col) w/ y=row, x=col
+            print_vtk_files(ctsave,v,u,vort_real,LX,LY,NX,NY)
 
         else:
 
@@ -465,7 +494,8 @@ def FFT_NS_Solver():
                 vort_real = fftpack.ifft2(vort_hat).real
 
                 # Save .vtk data!
-                print_vtk_files(ctsave,u.transpose(),v.transpose(),vort_real.transpose(),LX,LY,NX,NY)
+                # Note: switch order of u and v in this function bc of notation-> f(x,y) here rather than matrix convention of y(row,col) w/ y=row, x=col
+                print_vtk_files(ctsave,v,u,vort_real,LX,LY,NX,NY)
 
                 # Plot simulation time
                 print('Simulation Time(s): {0:6.6f}\n'.format(t))
