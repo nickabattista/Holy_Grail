@@ -31,15 +31,20 @@ print_LBM_Info();
 %
 % Simulation Parameters
 %
-tau=0.9;                      % tau: relaxation parameter related to viscosity
+tau=0.55;                     % tau: relaxation parameter related to viscosity
 density=0.01;                 % density to be used for initializing whole grid to value 1.0
 w1=4/9; w2=1/9; w3=1/36;      % weights for finding equilibrium distribution
-nx=256; ny=256;                 % number of grid cells in x and y directions, respectively
-Lx = 1; Ly = 1;               % Size of computational domain
-dx = Lx/nx; dy = Ly/ny;       % Grid Resolution in x and y directions, respectively
-f=repmat(density/9,[nx ny 9]);% Copies density/9 into 9-matrices of size [nx,ny] -> ALLOCATION for all "DIRECTIONS"
+Nx=256; Ny=128;               % number of grid cells in x and y directions, respectively
+Lx = 1; Ly = 0.5;             % Size of computational domain
+dx = Lx/Nx; dy = Ly/Ny;       % Grid Resolution in x and y directions, respectively
+
+
+%
+% Gridding Initialization
+%
+f=repmat(density/9,[Nx Ny 9]);% Copies density/9 into 9-matrices of size [Nx,Ny] -> ALLOCATION for all "DIRECTIONS"
 f_EQ = f;                     % Initializes F-equilibrium Storage space
-grid_size=nx*ny;              % Total number of grid cells
+grid_size=Nx*Ny;              % Total number of grid cells
 CI= 0:grid_size:7*grid_size;  % Indices to point to FIRST entry of the desired "z-stack" distribution grid      
 
 
@@ -48,32 +53,20 @@ CI= 0:grid_size:7*grid_size;  % Indices to point to FIRST entry of the desired "
 %
 % Possible Choices: 'cylinder1', 'cylinder2', 'channel', 'porous1', 'porous2'
 %
-choice = 'porous2';
+choice = 'cylinder1';
 percentPorosity = 0.7;  % Percent of Domain that's Porous (does not matter if not studying porous problem)
-[BOUND,deltaU,endTime] = give_Me_Problem_Geometry(choice,nx,ny,percentPorosity); %BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
+[BOUND,deltaU,endTime] = give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity); %BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
 print_simulation_info(choice);
 
 
-%Find Indices of NONZERO Elements, i.e., where "boundary points" IS
-ON=find(BOUND); %matrix offset of each Occupied Node
 
-% Give Boundary For Saving Data
-Bound_Pts = give_Me_Boundary_Pts_For_Visualization(dx,dy,nx,ny,Lx,Ly,ON);
-xMat = repmat(Lx-dx:-dx:0,nx)';
-yMat = repmat(0:dy:Ly,ny);
-xBounds = xMat(ON);
-xBounds = -xBounds + Lx;
-yBounds = yMat(ON);
-Bound_Pts = zeros(length(xBounds),2);
-for i =1:length(xBounds)
-    Bound_Pts(i,1) = xBounds(i);
-    Bound_Pts(i,2) = yBounds(i);
-end
-%subplot(1,2,1)
-%image(2-BOUND'); hold on;
-%subplot(1,2,2)
-%plot(Bound_Pts(:,1),Bound_Pts(:,2),'*');
-%pause();
+%Find Indices of NONZERO Elements, i.e., where "boundary points" IS
+ON=find(BOUND');      %matrix index of each Occupied Node (need transpose due to (x,y) matrix convention, e.g., row-id = x, col-id = y)
+ON_geo = find(BOUND); %matrix index of each Occupied Node
+
+% Give Boundary Points For Saving Data
+Bound_Pts = give_Me_Boundary_Pts_For_Visualization(dx,dy,Nx,Ny,Lx,Ly,ON_geo);
+
 
 %Offsets Indices for the Different Directions [i.e., levels of F_i=F(:,:,i) ] for known BOUNDARY pts.
 TO_REFLECT=[ON+CI(1) ON+CI(2) ON+CI(3) ON+CI(4) ON+CI(5) ON+CI(6) ON+CI(7) ON+CI(8)];
@@ -87,11 +80,13 @@ fprintf('Simulation Time: %d\n',ts);
 
 % SAVING DATA TO VTK %
 print_dump = floor(endTime/50);
-ctsave = 0;
+ctsave = 0; % Counts # of total time-steps
+pSave = 0;  % Counts # of time-steps with data saved
+
 % CREATE VIZ_IB2D FOLDER and VISIT FILES
 mkdir('vtk_data');
-UX = zeros(nx,ny); UY = UX; vorticity = UX(1:end-1,1:end-1);
-print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny,Bound_Pts);
+UX = zeros(Nx,Ny); UY = UX; vorticity = UX(1:end-1,1:end-1);
+print_vtk_files(pSave,UX,UY,vorticity,Lx,Ly,Nx,Ny,Bound_Pts);
 
 
 
@@ -100,7 +95,7 @@ while ts < endTime
     
     
     % STREAMING STEP (progate in respective directions)
-    f = please_Stream_Distribution(f,nx,ny);
+    f = please_Stream_Distribution(f,Nx,Ny);
         
     
     %Densities bouncing back at next timestep
@@ -116,7 +111,8 @@ while ts < endTime
     
     
     %Increase inlet velocity with each time step along left wall
-    UX(1,1:ny)=UX(1,1:ny) + deltaU;
+    UX(1,1:Ny)=UX(1,1:Ny) + deltaU;
+    
     
     %Enforce BCs to Zero Velocity / Zero Density
     UX(ON)=0;      %Makes all Boundary Regions have zero x-velocity 
@@ -149,13 +145,16 @@ while ts < endTime
     ctsave = ctsave + 1;
     if mod(ctsave,print_dump) == 0
 
+        % increment pSave
+        pSave = pSave + 1;
+        
         % compute vorticity
-        dUx_y = ( UX(1:nx-1,2:ny)-UX(1:nx-1,1:ny-1) ) / dy;
-        dUy_x = ( UY(2:nx,1:ny-1)-UY(1:nx-1,1:ny-1) ) / dx;
-        vorticity(1:nx-1,1:ny-1)=( dUy_x - dUx_y );
+        dUx_y = ( UX(1:Nx-1,2:Ny)-UX(1:Nx-1,1:Ny-1) ) / dy;
+        dUy_x = ( UY(2:Nx,1:Ny-1)-UY(1:Nx-1,1:Ny-1) ) / dx;
+        vorticity(1:Nx-1,1:Ny-1)=( dUy_x - dUx_y );
         
         % print to vtk
-        print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny,Bound_Pts);
+        print_vtk_files(pSave,UX,UY,vorticity,Lx,Ly,Nx,Ny,Bound_Pts);
         fprintf('Simulation Time: %d\n',ts);
     
     end
@@ -163,7 +162,7 @@ while ts < endTime
 end
 
 %Plots the "steady-state" velocities
-plot_Steady_State(UX,UY,BOUND,nx,ny,ts,choice);
+plot_Steady_State(UX,UY,BOUND,Nx,Ny,ts,choice);
 
 
 
@@ -174,72 +173,118 @@ plot_Steady_State(UX,UY,BOUND,nx,ny,ts,choice);
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [BOUND deltaU endTime] = give_Me_Problem_Geometry(choice,nx,ny,percentPorosity)
+function [BOUND, deltaU, endTime] = give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity)
 
 
 if strcmp(choice,'cylinder1')
 
-    % WORKS WELL: [nx,ny]=[320,320], tau=0.53, density = 0.01
-    %CHANNEL FLOW W/ CYLINDER
-    a=repmat(-(nx-1)/2:(nx-1)/2,[ny,1]); 
-    r = floor(nx/5);
-    aR = ceil(nx/5);
-    BOUND=( a.^2+(a+aR)'.^2)<r;          %PUTS "1's" within region of Cylinder
-    BOUND(1:nx,[1 ny])=1;               %Puts "1's" on Left/Right Boundaries
-    deltaU = 0.01;                      %Incremental increase to inlet velocity
-    endTime = 2500;
+    %
+    % FLOW PAST CYLINDER EXAMPLE
+    % 
+    % WORKS WELL: [Nx,Ny]=[320,320], tau=0.53, density = 0.01
+    
+    % radius of cylinder (centered in middle of domain, given in terms of mesh widths)
+    r = 0.125*Ny;
+    
+    % Creates (x,y)-proxy to define geometry upon (based on 1:1:Nx, 1:1:Ny)
+    a1=repmat(-(Nx-1)/2:(Nx-1)/2,[Ny,1]); 
+    a2=repmat(-(Ny-1)/2:(Ny-1)/2,[Nx,1]);
+    
+    % Amount to translate cylinder from middle of domain
+    aR = floor(0.25*Nx);                
+    
+    % CREATE CYLINDER GEOMETRY (Note: "+" shifts left bc of defining circles)
+    BOUND=( (a1+aR).^2+(a2)'.^2)<r^2;   % Puts "1's" within region of Cylinder 
+    
+    % CREATE TOP/BOTTOM BOUNDARIES
+    BOUND([1 Ny],1:Nx)=1;               % Puts "1's" on Top/Bottom Boundaries
+    
+    % Simulation characteristics
+    deltaU = 0.01;                      % Incremental increase to inlet velocity
+    endTime = 4000;                     % Total Number of Time-Steps
     
 elseif strcmp(choice,'cylinder2')
 
-    % WORKS WELL: [nx,ny]=[320,320], tau=0.53, density = 0.01
-    %CHANNEL FLOW W/ CYLINDER
-    a=repmat(-(nx-1)/2:(nx-1)/2,[ny,1]);
-    r = floor(nx/2.5);
-    aL = floor(nx/5);
-    aR = ceil(nx/2);
-    aM = 0.3*aR;
-    B1=  ( ( (a).^2+(a+3.75*aR/5)'.^2)<r );           %PUTS "1's" within region of Cylinder1
-    B2=  ( ( (a+aL/1.75).^2+(a+4*aM/5)'.^2)<r );        %PUTS "1's" within region of Cylinder2
-    B3=  ( ( (a-aL/1.75).^2+(a+4*aM/5)'.^2)<r );        %PUTS "1's" within region of Cylinder1
-    BOUND= double(B1)+double(B2)+double(B3); %PUTS together all cylinder geometry
-    BOUND(1:nx,[1 ny])=1;                    %Puts "1's" on Left/Right Boundaries
-    deltaU = 0.01;                           %Incremental increase to inlet velocity
-    endTime = 4000;
+    %
+    % FLOW PAST MULTIPLE CYLINDERs EXAMPLE
+    % 
+    % WORKS WELL: [Nx,Ny]=[320,320], tau=0.53, density = 0.01
+    
+    % radius of bubble (centered in middle of domain, given in terms of mesh widths)
+    r = 0.125*Ny;
+    
+    % Creates (x,y)-proxy to define geometry upon (based on 1:1:Nx, 1:1:Ny)
+    a1=repmat(-(Nx-1)/2:(Nx-1)/2,[Ny,1]); 
+    a2=repmat(-(Ny-1)/2:(Ny-1)/2,[Nx,1]);
+    
+    % Amount to translate cylinder from middle of domain
+    aR = floor(0.25*Nx);    
+    aSx = floor(0.15*Nx);
+    aY = floor(0.2*Ny);
+    
+    % CREATE CYLINDER GEOMETRY (Note: "+" shifts left bc of defining circles)
+    B1 =( (a1+aR).^2+(a2)'.^2)<r^2;   % Puts "1's" within region of Cylinder  
+    B1 =( (a1+aR).^2+(a2)'.^2)<r^2;   % Puts "1's" within region of Cylinder  
+    B1 =( (a1+aR).^2+(a2)'.^2)<r^2;   % Puts "1's" within region of Cylinder  
+
+    
+    
+    %B1=  ( ( (a1).^2+(a2+3.75*aR/5)'.^2)<r );           % PUTS "1's" within region of Cylinder1
+    %B2=  ( ( (a1+aL/1.75).^2+(a2+4*aM/5)'.^2)<r );      % PUTS "1's" within region of Cylinder2
+    %B3=  ( ( (a1-aL/1.75).^2+(a2+4*aM/5)'.^2)<r );      % PUTS "1's" within region of Cylinder3
+    
+    %size(B1)
+    %size(B2)
+    %size(B3)
+    %pause();
+    
+    %BOUND= double(B1)+double(B2)+double(B3);          % PUTS together all cylinder geometry
+    BOUND = double(B1);
+    
+    %size(BOUND)
+    
+    %BOUND(1:Ny,[1 Nx])=1;                             % Puts "1's" on Top/Bottom Boundaries
+    BOUND([1 Ny],1:Nx)=1;
+    
+    %size(BOUND)
+    
+    deltaU = 0.01;                                    % Incremental increase to inlet velocity
+    endTime = 4000;                                   % Total Number of Time-Steps
 
 elseif strcmp(choice,'channel')
     
     %CHANNEL GEOMETRY
-    BOUND=zeros(nx,ny);
-    BOUND(1:nx,[1 ny])=1;               %PUTS "1's" on LEFT/RIGHT Boundaries
-    deltaU = 0.01;                      %Incremental increase to inlet velocity
-    endTime = 2500;
+    BOUND=zeros(Nx,Ny);
+    BOUND(1:Nx,[1 Ny])=1;               % PUTS "1's" on LEFT/RIGHT Boundaries
+    deltaU = 0.01;                      % Incremental increase to inlet velocity
+    endTime = 2500;                     % Total Number of Time-Steps
 
 
 elseif strcmp(choice,'porous1')
     
     %POROUS RANDOM DOMAIN
-    BOUND=rand(nx,ny)<1-percentPorosity;   %PUTS "1's" inside domain randomly if RAND value above percent  
-    aS = ceil(nx/5);
-    aE = ceil(4*nx/5);
+    BOUND=rand(Nx,Ny)<1-percentPorosity;   %PUTS "1's" inside domain randomly if RAND value above percent  
+    aS = ceil(Nx/5);
+    aE = ceil(4*Nx/5);
     BOUND(1:aS,:) = 0; 
     BOUND(aE:end,:)=0;
-    BOUND(1:nx,[1 ny])=1;                %PUTS "1's" on LEFT/RIGHT Boundaries
-    deltaU = 1e-7;                       %Incremental increase to inlet velocity
-    endTime = 5000;
+    BOUND(1:Nx,[1 Ny])=1;                % PUTS "1's" on LEFT/RIGHT Boundaries
+    deltaU = 1e-7;                       % Incremental increase to inlet velocity
+    endTime = 5000;                      % Total Number of Time-Steps
     
 elseif strcmp(choice,'porous2')
     
     %POROUS RANDOM DOMAIN
-    BOUND=rand(nx,ny)<1-percentPorosity;  %PUTS "1's" inside domain randomly if RAND value above percent              
-    BOUND(1:floor(9*nx/31),:) = 0;                   %PUTS "0's" to make open channels through porous structure
-    BOUND(floor(7*nx/31):floor(9*nx/31),:) = 0;                   %PUTS "0's" to make open channels through porous structure
-    BOUND(floor(13*nx/31):floor(15*nx/31),:) = 0;                 %PUTS "0's" to make open channels through porous structure
-    BOUND(floor(19/31*nx):floor(21/31*nx),:) = 0;                 %PUTS "0's" to make open channels through porous structure
-    BOUND(floor(25/31*nx):floor(27/31*nx),:)=0;                   %PUTS "0's" to make open channels through porous structure
-    BOUND(floor(30/31*nx):end,:) = 0;                %PUTS "0's" to make open channels through porous structure
-    BOUND(1:nx,[1 ny])=1;               %PUTS "1's" on LEFT/RIGHT Boundaries
-    deltaU = 1e-7;                      %Incremental increase to inlet velocity
-    endTime = 5000;
+    BOUND=rand(Nx,Ny)<1-percentPorosity;  % PUTS "1's" inside domain randomly if RAND value above percent              
+    BOUND(1:floor(9*Nx/31),:) = 0;                   % PUTS "0's" to make open channels through porous structure
+    BOUND(floor(7*Nx/31):floor(9*Nx/31),:) = 0;                   % PUTS "0's" to make open channels through porous structure
+    BOUND(floor(13*Nx/31):floor(15*Nx/31),:) = 0;                 % PUTS "0's" to make open channels through porous structure
+    BOUND(floor(19/31*Nx):floor(21/31*Nx),:) = 0;                 % PUTS "0's" to make open channels through porous structure
+    BOUND(floor(25/31*Nx):floor(27/31*Nx),:)=0;                   % PUTS "0's" to make open channels through porous structure
+    BOUND(floor(30/31*Nx):end,:) = 0;                % PUTS "0's" to make open channels through porous structure
+    BOUND(1:Nx,[1 Ny])=1;               % PUTS "1's" on LEFT/RIGHT Boundaries
+    deltaU = 1e-7;                      % Incremental increase to inlet velocity
+    endTime = 5000;                     % Total Number of Time-Steps
 
 end
 
@@ -252,24 +297,24 @@ end
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function f = please_Stream_Distribution(f,nx,ny)
+function f = please_Stream_Distribution(f,Nx,Ny)
    
 
-f(:,:,1)=f([nx 1:nx-1],:,1);          %Stream Right
+f(:,:,1)=f([Nx 1:Nx-1],:,1);          %Stream Right
 
-f(:,:,2)=f(:,[ny 1:ny-1],2);          %Stream Up
+f(:,:,2)=f(:,[Ny 1:Ny-1],2);          %Stream Up
 
-f(:,:,3)=f([2:nx 1],:,3);             %Stream Left
+f(:,:,3)=f([2:Nx 1],:,3);             %Stream Left
 
-f(:,:,4)=f(:,[2:ny 1],4);             %Stream Down
+f(:,:,4)=f(:,[2:Ny 1],4);             %Stream Down
 
-f(:,:,5)=f([nx 1:nx-1],[ny 1:ny-1],5);%Stream Right-Up
+f(:,:,5)=f([Nx 1:Nx-1],[Ny 1:Ny-1],5);%Stream Right-Up
 
-f(:,:,6)=f([2:nx 1],[ny 1:ny-1],6);   %Stream Left-Up
+f(:,:,6)=f([2:Nx 1],[Ny 1:Ny-1],6);   %Stream Left-Up
 
-f(:,:,7)=f([2:nx 1],[2:ny 1],7);      %Stream Left-Down    
+f(:,:,7)=f([2:Nx 1],[2:Ny 1],7);      %Stream Left-Down    
 
-f(:,:,8)=f([nx 1:nx-1],[2:ny 1],8);   %Stream Right-Down
+f(:,:,8)=f([Nx 1:Nx-1],[2:Ny 1],8);   %Stream Right-Down
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -305,25 +350,39 @@ function f_EQ = please_Give_Equilibrium_Distribution(w1,w2,w3,DENSITY,UX,UY,U_SQ
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-function Bound_Pts = give_Me_Boundary_Pts_For_Visualization(dx,dy,nx,ny,Lx,Ly,ON)
+function Bound_Pts = give_Me_Boundary_Pts_For_Visualization(dx,dy,Nx,Ny,Lx,Ly,ON)
 
-    xMat = repmat(Lx-dx:-dx:0,nx)';
-    yMat = repmat(0:dy:Ly,ny);
+
+    % Initialize xMat & vMat matrices
+    xMat = zeros(Ny,Nx);
+    yMat = zeros(Ny,Nx);
+
+    % Construct Matrix of x-Values
+    xVec = 0:dx:Lx-dx;
+    for i=1:Ny
+       xMat(i,:) = xVec; 
+    end
+    
+    % Construct Matrix of y-Values
+    yVec = (Ly-dy:-dy:0)';
+    for i=1:Nx
+        yMat(:,i) = yVec;
+    end
+    
+    % Get x-Val and y-Val of each boundary point
     xBounds = xMat(ON);
-    xBounds = -xBounds + Lx;
     yBounds = yMat(ON);
     Bound_Pts = zeros(length(xBounds),2);
     for i =1:length(xBounds)
         Bound_Pts(i,1) = xBounds(i);
         Bound_Pts(i,2) = yBounds(i);
     end
+    
     %subplot(1,2,1)
     %image(2-BOUND'); hold on;
     %subplot(1,2,2)
     %plot(Bound_Pts(:,1),Bound_Pts(:,2),'*');
     %pause();    
-
-    
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -331,18 +390,18 @@ function Bound_Pts = give_Me_Boundary_Pts_For_Visualization(dx,dy,nx,ny,Lx,Ly,ON
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function plot_Steady_State(UX,UY,BOUND,nx,ny,ts,choice)
+function plot_Steady_State(UX,UY,BOUND,Nx,Ny,ts,choice)
 
 
 %Set up grids
-xGrid = 1:1:nx;
-yGrid = 1:1:ny;
+xGrid = 1:1:Nx;
+yGrid = 1:1:Ny;
 
 %Scale Factor for Velocity Vectors
 scale = 5;
 
 %Streamlines
-yStart = floor(nx/3):2:floor(2*nx/3);
+yStart = floor(Nx/3):2:floor(2*Nx/3);
 xStart = 2*ones(size(yStart));
 options = [0.01 10000];
 
@@ -351,173 +410,176 @@ velMag = sqrt( UX.*UX + UY.*UY );
 
 %Compute vorticity (approximate vorticity = dUy/dx - dYx/dy )
 vorticity = (UY - UX)/2;
-dUx_y = UX(1:nx-1,2:ny)-UX(1:nx-1,1:ny-1);
-dUy_x = UY(2:nx,1:ny-1)-UY(1:nx-1,1:ny-1);
-vorticity(1:nx-1,1:ny-1)=( dUy_x - dUx_y )/(2); 
+dUx_y = UX(1:Nx-1,2:Ny)-UX(1:Nx-1,1:Ny-1);
+dUy_x = UY(2:Nx,1:Ny-1)-UY(1:Nx-1,1:Ny-1);
+vorticity(1:Nx-1,1:Ny-1)=( dUy_x - dUx_y )/(2); 
 
+% Quiver-plot has error in Nx ~= Ny
+if Nx==Ny
 
+    if strcmp(choice,'channel')
 
-if strcmp(choice,'channel')
-    
-    figure(1);
-    subplot(1,2,1)
-    colormap(gray(2));
-    image(2-BOUND');hold on;
-    quiver(xGrid,yGrid,UX(xGrid,:)',UY(yGrid,:)');
-    title(['Velocity Field at',num2str(ts),'\Deltat']);
-    xlabel('x');
-    ylabel('y');
-    
-    xPts = [floor(nx/4) floor(2*nx/4) floor(3*nx/4)];
-    yVec = 1:ny;
-    uMag1 = sqrt( UX(xPts(1),:).*UX(xPts(1),:) + UY(xPts(1),:).*UY(xPts(1),:)  );
-    uMag2 = sqrt( UX(xPts(2),:).*UX(xPts(2),:) + UY(xPts(2),:).*UY(xPts(2),:)  );
-    uMag3 = sqrt( UX(xPts(3),:).*UX(xPts(3),:) + UY(xPts(3),:).*UY(xPts(3),:)  );
-    mat(1,:) = uMag1;
-    mat(2,:) = uMag2;
-    mat(3,:) = uMag3;
-    
-    subplot(1,2,2)
-    plot(yVec,uMag1,'.-','MarkerSize',7); hold on;
-    plot(yVec,uMag2,'r.-','MarkerSize',7); hold on;
-    plot(yVec,uMag3,'g.-','MarkerSize',7); hold on;
-    xlabel('y');
-    ylabel('Velocity Magnitude'); 
-    title('Cross-sectional velocities along tube');
-    legend('1/3 into tube','2/3 into tube','3/3 into tube');
-    maxy = 1.05*max(max(mat));
-    axis([0 nx 0 maxy]);
-    
-elseif ( strcmp(choice,'cylinder1') || strcmp(choice,'cylinder2') )
-    
-    figure(1);
-    subplot(1,2,1)
-    colormap(gray(2));
-    image(2-BOUND');hold on;
-    quiver(xGrid,yGrid,UX(xGrid,:)',UY(yGrid,:)');
-    title(['Velocity Field at',num2str(ts),'\Deltat']);
-    xlabel('x');
-    ylabel('y');
-    
-    xPts = [floor(nx/5) floor(2*nx/5) floor(3*nx/5) floor(4*nx/5)];
-    yVec = 1:ny;
-    uMag1 = sqrt( UX(xPts(1),:).*UX(xPts(1),:) + UY(xPts(1),:).*UY(xPts(1),:)  );
-    uMag2 = sqrt( UX(xPts(2),:).*UX(xPts(2),:) + UY(xPts(2),:).*UY(xPts(2),:)  );
-    uMag3 = sqrt( UX(xPts(3),:).*UX(xPts(3),:) + UY(xPts(3),:).*UY(xPts(3),:)  );
-    uMag4 = sqrt( UX(xPts(4),:).*UX(xPts(4),:) + UY(xPts(4),:).*UY(xPts(4),:)  );
-    mat(1,:) = uMag1;
-    mat(2,:) = uMag2;
-    mat(3,:) = uMag3;
-    mat(4,:) = uMag4;
-    
-    subplot(1,2,2)
-    plot(yVec,uMag1,'.-','MarkerSize',7); hold on;
-    plot(yVec,uMag2,'k.-','MarkerSize',7); hold on;
-    plot(yVec,uMag3,'r.-','MarkerSize',7); hold on;
-    plot(yVec,uMag4,'g.-','MarkerSize',7); hold on;
-    xlabel('y');
-    ylabel('Velocity Magnitude'); 
-    title('Cross-sectional Velocities Along Channel');
-    legend('Radii before','Middle cylinder','Radii after','3/4 down tube');
-    maxy = 1.05*max(max(mat));
-    axis([0 nx 0 maxy]);
-       
-elseif strcmp(choice,'porous1')
-    
-    figure(1);
-    subplot(1,2,1);
-    colormap(gray(2));
-    uMag = sqrt( UX.*UX + UY.*UY );
-    scaley = 5.5/max( max( uMag ));
-    image(2-BOUND');hold on;
-    quiver(xGrid(2:end),yGrid(1:end),scaley*UX(xGrid(2:end),:)',scaley*UY(yGrid(2:end),:)','AutoScale','off'); hold on;
-    title(['Velocity Field at ',num2str(ts),'\Deltat']);
-    xlabel('x');
-    ylabel('y');
-    axis([1 nx 1 ny]);
-    
-    xPts = [floor(nx/15) floor(nx/5) nx-floor(nx/5) nx-floor(nx/15)];
-    %xPts = [2 6 26 31];
-    yVec = 1:ny;
-    uMag1 = sqrt( UX(xPts(1),:).*UX(xPts(1),:) + UY(xPts(1),:).*UY(xPts(1),:)  );
-    uMag2 = sqrt( UX(xPts(2),:).*UX(xPts(2),:) + UY(xPts(2),:).*UY(xPts(2),:)  );
-    uMag3 = sqrt( UX(xPts(3),:).*UX(xPts(3),:) + UY(xPts(3),:).*UY(xPts(3),:)  );
-    uMag4 = sqrt( UX(xPts(4),:).*UX(xPts(4),:) + UY(xPts(4),:).*UY(xPts(4),:)  );
-    mat(1,:) = uMag1;
-    mat(2,:) = uMag2;
-    mat(3,:) = uMag3;
-    mat(4,:) = uMag4;
-    
-    subplot(1,2,2)
-    plot(yVec,uMag1,'.-','MarkerSize',7); hold on;
-    plot(yVec,uMag2,'k.-','MarkerSize',7); hold on;
-    plot(yVec,uMag3,'r.-','MarkerSize',7); hold on;
-    plot(yVec,uMag4,'g.-','MarkerSize',7); hold on;
-    xlabel('y');
-    ylabel('Velocity Magnitude'); 
-    title('Cross-sectional Velocities Along Channel');
-    legend('Inflow','Right before','Right after','Outflow');
-    maxy = 1.05*max(max(mat));
-    axis([0 nx 0 maxy]);
-    
-elseif strcmp(choice,'porous2')
-    
-    figure(1);
-    subplot(1,2,1);
-    colormap(gray(2));
-    uMag = sqrt( UX.*UX + UY.*UY );
-    scaley = 5.5/max( max( uMag ));
-    image(2-BOUND');hold on;
-    quiver(xGrid(2:end),yGrid(1:end),scaley*UX(xGrid(2:end),:)',scaley*UY(yGrid(2:end),:)','AutoScale','off'); hold on;
-    title(['Velocity Field at ',num2str(ts),'\Deltat']);
-    xlabel('x');
-    ylabel('y');
-    axis([1 nx 1 ny]);
-    
-    xPts = [floor(nx/5) floor(2*nx/5) floor(3*nx/5) floor(4*nx/5)];
-    %xPts = [8 14 20 26];
-    yVec = 1:ny;
-    uMag1 = sqrt( UX(xPts(1),:).*UX(xPts(1),:) + UY(xPts(1),:).*UY(xPts(1),:)  );
-    uMag2 = sqrt( UX(xPts(2),:).*UX(xPts(2),:) + UY(xPts(2),:).*UY(xPts(2),:)  );
-    uMag3 = sqrt( UX(xPts(3),:).*UX(xPts(3),:) + UY(xPts(3),:).*UY(xPts(3),:)  );
-    uMag4 = sqrt( UX(xPts(4),:).*UX(xPts(4),:) + UY(xPts(4),:).*UY(xPts(4),:)  );
-    mat(1,:) = uMag1;
-    mat(2,:) = uMag2;
-    mat(3,:) = uMag3;
-    mat(4,:) = uMag4;
-    
-    subplot(1,2,2)
-    plot(yVec,uMag1,'.-', 'MarkerSize',7); hold on;
-    plot(yVec,uMag2,'k.-','MarkerSize',7); hold on;
-    plot(yVec,uMag3,'r.-','MarkerSize',7); hold on;
-    plot(yVec,uMag4,'g.-','MarkerSize',7); hold on;
-    xlabel('y');
-    ylabel('Velocity Magnitude'); 
-    title('Cross-sectional Velocities Along Channel');
-    legend('After 1st','After 2nd','After 3rd','After 4th');
-    maxy = 1.05*max(max(mat));
-    axis([0 nx 0 maxy]);
-   
+        figure(1);
+        subplot(1,2,1)
+        colormap(gray(2));
+        image(2-BOUND');hold on;
+        quiver(xGrid,yGrid,UX(xGrid,:)',UY(yGrid,:)');
+        title(['Velocity Field at',num2str(ts),'\Deltat']);
+        xlabel('x');
+        ylabel('y');
+
+        xPts = [floor(Nx/4) floor(2*Nx/4) floor(3*Nx/4)];
+        yVec = 1:Ny;
+        uMag1 = sqrt( UX(xPts(1),:).*UX(xPts(1),:) + UY(xPts(1),:).*UY(xPts(1),:)  );
+        uMag2 = sqrt( UX(xPts(2),:).*UX(xPts(2),:) + UY(xPts(2),:).*UY(xPts(2),:)  );
+        uMag3 = sqrt( UX(xPts(3),:).*UX(xPts(3),:) + UY(xPts(3),:).*UY(xPts(3),:)  );
+        mat(1,:) = uMag1;
+        mat(2,:) = uMag2;
+        mat(3,:) = uMag3;
+
+        subplot(1,2,2)
+        plot(yVec,uMag1,'.-','MarkerSize',7); hold on;
+        plot(yVec,uMag2,'r.-','MarkerSize',7); hold on;
+        plot(yVec,uMag3,'g.-','MarkerSize',7); hold on;
+        xlabel('y');
+        ylabel('Velocity Magnitude'); 
+        title('Cross-sectional velocities along tube');
+        legend('1/3 into tube','2/3 into tube','3/3 into tube');
+        maxy = 1.05*max(max(mat));
+        axis([0 Nx 0 maxy]);
+
+    elseif ( strcmp(choice,'cylinder1') || strcmp(choice,'cylinder2') )
+
+        figure(1);
+        subplot(1,2,1)
+        colormap(gray(2));
+        image(2-BOUND');hold on;
+        quiver(xGrid,yGrid,UX(xGrid,:)',UY(yGrid,:)');
+        title(['Velocity Field at',num2str(ts),'\Deltat']);
+        xlabel('x');
+        ylabel('y');
+
+        xPts = [floor(Nx/5) floor(2*Nx/5) floor(3*Nx/5) floor(4*Nx/5)];
+        yVec = 1:Ny;
+        uMag1 = sqrt( UX(xPts(1),:).*UX(xPts(1),:) + UY(xPts(1),:).*UY(xPts(1),:)  );
+        uMag2 = sqrt( UX(xPts(2),:).*UX(xPts(2),:) + UY(xPts(2),:).*UY(xPts(2),:)  );
+        uMag3 = sqrt( UX(xPts(3),:).*UX(xPts(3),:) + UY(xPts(3),:).*UY(xPts(3),:)  );
+        uMag4 = sqrt( UX(xPts(4),:).*UX(xPts(4),:) + UY(xPts(4),:).*UY(xPts(4),:)  );
+        mat(1,:) = uMag1;
+        mat(2,:) = uMag2;
+        mat(3,:) = uMag3;
+        mat(4,:) = uMag4;
+
+        subplot(1,2,2)
+        plot(yVec,uMag1,'.-','MarkerSize',7); hold on;
+        plot(yVec,uMag2,'k.-','MarkerSize',7); hold on;
+        plot(yVec,uMag3,'r.-','MarkerSize',7); hold on;
+        plot(yVec,uMag4,'g.-','MarkerSize',7); hold on;
+        xlabel('y');
+        ylabel('Velocity Magnitude'); 
+        title('Cross-sectional Velocities Along Channel');
+        legend('Radii before','Middle cylinder','Radii after','3/4 down tube');
+        maxy = 1.05*max(max(mat));
+        axis([0 Nx 0 maxy]);
+
+    elseif strcmp(choice,'porous1')
+
+        figure(1);
+        subplot(1,2,1);
+        colormap(gray(2));
+        uMag = sqrt( UX.*UX + UY.*UY );
+        scaley = 5.5/max( max( uMag ));
+        image(2-BOUND');hold on;
+        quiver(xGrid(2:end),yGrid(1:end),scaley*UX(xGrid(2:end),:)',scaley*UY(yGrid(2:end),:)','AutoScale','off'); hold on;
+        title(['Velocity Field at ',num2str(ts),'\Deltat']);
+        xlabel('x');
+        ylabel('y');
+        axis([1 Nx 1 Ny]);
+
+        xPts = [floor(Nx/15) floor(Nx/5) Nx-floor(Nx/5) Nx-floor(Nx/15)];
+        %xPts = [2 6 26 31];
+        yVec = 1:Ny;
+        uMag1 = sqrt( UX(xPts(1),:).*UX(xPts(1),:) + UY(xPts(1),:).*UY(xPts(1),:)  );
+        uMag2 = sqrt( UX(xPts(2),:).*UX(xPts(2),:) + UY(xPts(2),:).*UY(xPts(2),:)  );
+        uMag3 = sqrt( UX(xPts(3),:).*UX(xPts(3),:) + UY(xPts(3),:).*UY(xPts(3),:)  );
+        uMag4 = sqrt( UX(xPts(4),:).*UX(xPts(4),:) + UY(xPts(4),:).*UY(xPts(4),:)  );
+        mat(1,:) = uMag1;
+        mat(2,:) = uMag2;
+        mat(3,:) = uMag3;
+        mat(4,:) = uMag4;
+
+        subplot(1,2,2)
+        plot(yVec,uMag1,'.-','MarkerSize',7); hold on;
+        plot(yVec,uMag2,'k.-','MarkerSize',7); hold on;
+        plot(yVec,uMag3,'r.-','MarkerSize',7); hold on;
+        plot(yVec,uMag4,'g.-','MarkerSize',7); hold on;
+        xlabel('y');
+        ylabel('Velocity Magnitude'); 
+        title('Cross-sectional Velocities Along Channel');
+        legend('Inflow','Right before','Right after','Outflow');
+        maxy = 1.05*max(max(mat));
+        axis([0 Nx 0 maxy]);
+
+    elseif strcmp(choice,'porous2')
+
+        figure(1);
+        subplot(1,2,1);
+        colormap(gray(2));
+        uMag = sqrt( UX.*UX + UY.*UY );
+        scaley = 5.5/max( max( uMag ));
+        image(2-BOUND');hold on;
+        quiver(xGrid(2:end),yGrid(1:end),scaley*UX(xGrid(2:end),:)',scaley*UY(yGrid(2:end),:)','AutoScale','off'); hold on;
+        title(['Velocity Field at ',num2str(ts),'\Deltat']);
+        xlabel('x');
+        ylabel('y');
+        axis([1 Nx 1 Ny]);
+
+        xPts = [floor(Nx/5) floor(2*Nx/5) floor(3*Nx/5) floor(4*Nx/5)];
+        %xPts = [8 14 20 26];
+        yVec = 1:Ny;
+        uMag1 = sqrt( UX(xPts(1),:).*UX(xPts(1),:) + UY(xPts(1),:).*UY(xPts(1),:)  );
+        uMag2 = sqrt( UX(xPts(2),:).*UX(xPts(2),:) + UY(xPts(2),:).*UY(xPts(2),:)  );
+        uMag3 = sqrt( UX(xPts(3),:).*UX(xPts(3),:) + UY(xPts(3),:).*UY(xPts(3),:)  );
+        uMag4 = sqrt( UX(xPts(4),:).*UX(xPts(4),:) + UY(xPts(4),:).*UY(xPts(4),:)  );
+        mat(1,:) = uMag1;
+        mat(2,:) = uMag2;
+        mat(3,:) = uMag3;
+        mat(4,:) = uMag4;
+
+        subplot(1,2,2)
+        plot(yVec,uMag1,'.-', 'MarkerSize',7); hold on;
+        plot(yVec,uMag2,'k.-','MarkerSize',7); hold on;
+        plot(yVec,uMag3,'r.-','MarkerSize',7); hold on;
+        plot(yVec,uMag4,'g.-','MarkerSize',7); hold on;
+        xlabel('y');
+        ylabel('Velocity Magnitude'); 
+        title('Cross-sectional Velocities Along Channel');
+        legend('After 1st','After 2nd','After 3rd','After 4th');
+        maxy = 1.05*max(max(mat));
+        axis([0 Nx 0 maxy]);
+
+    end
+
 end
 
 figure(2)
 subplot(1,2,1)
     hold off
     contourf(xGrid,yGrid,velMag',7);hold on;
-    quiver(xGrid,yGrid,scale*UX(1:nx,:)',scale*UY(1:nx,:)','k','AutoScale','off');hold on;
+    quiver(xGrid,yGrid,scale*UX(1:Nx,:)',scale*UY(1:Nx,:)','k','AutoScale','off');hold on;
     title('Velocity Magnitude Colormap');
     axis equal
-    axis([1 nx 1 ny]);
+    axis([1 Nx 1 Ny]);
 
 subplot(1,2,2)
     hold off
     contourf(xGrid,yGrid,vorticity',3); hold on;
-    h = streamline(xGrid,yGrid,scale*UX(1:nx,:)',scale*UY(1:nx,:)',xStart,yStart,options); hold on;
+    h = streamline(xGrid,yGrid,scale*UX(1:Nx,:)',scale*UY(1:Nx,:)',xStart,yStart,options); hold on;
     set(h,'linewidth',1.25,'color','k');
     plot(xStart,yStart,'r.','MarkerSize',6); hold on;
     title('Vorticity Colormap and Streamlines');
     axis equal
-    axis([1 nx 1 ny]);
+    axis([1 Nx 1 Ny]);
     
 
 
@@ -584,14 +646,14 @@ elseif strcmp(choice,'cylinder2')
     fprintf('Try changing the tau (viscosity) to observe differing dynamics\n');
     fprintf('Also try adding cylinders or changing their place in the "give_Me_Problem_Geometry" function\n\n\n');
     
-elseif strcmp(choice,'porous1');
+elseif strcmp(choice,'porous1')
     
     fprintf('You are simulating porous media flow\n');
     fprintf('Flow proceeds left to right through the channel containing obstacles\n');
     fprintf('Try changing the porosity (percentPorosity) to observe differing dynamics\n');
     fprintf('NOTE: each simulation creates a RANDOM porous geometry\n\n\n');
     
-elseif strcmp(choice,'porous2');
+elseif strcmp(choice,'porous2')
     
     fprintf('You are simulating flow through various porous layers\n');
     fprintf('Flow proceeds left to right through the channel containing obstacles\n');
