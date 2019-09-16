@@ -11,6 +11,7 @@ function print_vtk_files(ctsave,U,V,P,vorticity,Lx,Ly,nx,ny)
 dx = Lx/(nx-1); 
 dy = Ly/(ny-1);
 
+
 %Go into viz_IB2d directory
 cd('vtk_data');
 
@@ -18,12 +19,12 @@ cd('vtk_data');
 strNUM = give_String_Number_For_VTK(ctsave);
 
 %Prints x-Velocity Component
-confName = ['uX.' strNUM '.vtk'];
-savevtk_scalar(U, confName, 'uX',dx,dy);
+%confName = ['uX.' strNUM '.vtk'];
+%savevtk_scalar(U, confName, 'uX',dx,dy);
 
 %Prints y-Velocity Component
-confName = ['uY.' strNUM '.vtk'];
-savevtk_scalar(V, confName, 'uY',dx,dy);
+%confName = ['uY.' strNUM '.vtk'];
+%savevtk_scalar(V, confName, 'uY',dx,dy);
 
 %Prints Mag. of Velocity 
 confName = ['uMag.' strNUM '.vtk'];
@@ -35,8 +36,8 @@ confName = ['Omega.' strNUM '.vtk'];
 savevtk_scalar(vorticity, confName, 'Omega',dx,dy);
 
 %Prints Pressure
-confName = ['P.' strNUM '.vtk'];
-savevtk_scalar(P, confName, 'P',dx,dy);
+%confName = ['P.' strNUM '.vtk'];
+%savevtk_scalar(P, confName, 'P',dx,dy);
 
 %Print VECTOR DATA (i.e., velocity data) to .vtk file
 velocityName = ['u.' strNUM '.vtk'];
@@ -70,7 +71,7 @@ function savevtk_vector(X, Y, filename, vectorName,dx,dy)
     fprintf(fid, '\n');
     fprintf(fid, 'ORIGIN    0.000   0.000   0.000\n');
     %fprintf(fid, 'SPACING   1.000   1.000   1.000\n'); if want [1,32]x[1,32] rather than [0,Lx]x[0,Ly]
-    fprintf(fid, ['SPACING   ' num2str(dx)   num2str(dy) '   1.000\n']);
+    fprintf(fid, ['SPACING   ' num2str(dx) '  '  num2str(dy) '   1.000\n']);
     fprintf(fid, '\n');
     fprintf(fid, 'POINT_DATA   %d\n', nx*ny);
     fprintf(fid, ['VECTORS ' vectorName ' double\n']);
@@ -110,7 +111,7 @@ function savevtk_scalar(array, filename, colorMap,dx,dy)
     fprintf(fid, '\n');
     fprintf(fid, 'ORIGIN    0.000   0.000   0.000\n');
     %fprintf(fid, 'SPACING   1.000   1.000   1.000\n'); if want [1,32]x[1,32] rather than [0,Lx]x[0,Ly]
-    fprintf(fid, ['SPACING   ' num2str(dx)   num2str(dy) '   1.000\n']);
+    fprintf(fid, ['SPACING   ' num2str(dx) '  '  num2str(dy) '   1.000\n']);
     fprintf(fid, '\n');
     fprintf(fid, 'POINT_DATA   %d\n', nx*ny*nz);
     fprintf(fid, ['SCALARS ' colorMap ' double\n']);
