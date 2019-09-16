@@ -1,12 +1,11 @@
-function Projection_Method()
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Solves the Navier-Stokes equations in the Velocity-Pressure formulation 
 % using a predictor-corrector projection method approach
 %
 % Author: Nicholas A. Battista
 % Created: Novermber 24, 2014
-% Modified: December 8, 2014
+% Modified: September 11, 2019
 % 
 % Equations of Motion:
 % Du/Dt = -Nabla(P) + nu*Laplacian(u)  [Conservation of Momentum]
@@ -22,6 +21,10 @@ function Projection_Method()
 %          obtain a velocity field that satisfies momentum and
 %          incompressiblity.
 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function Projection_Method()
+
 
 % Print key fluid solver ideas to screen
 print_Projection_Info();
@@ -30,50 +33,55 @@ print_Projection_Info();
 %
 % GRID PARAMETERS %
 %
-Lx = 2.0;        %Lenght in x
-Ly = 1.0;        %Length in y
-nx=256;          %Initialize X-Grid (Spatial Resolution in x)
-ny=128;           %Initialize Y-Grid (Spatial Resolution in y)
-dx=Lx/nx;        %Spatial Distance Definition in x
-xGrid = 0:dx:Lx; %xGrid
-yGrid = 0:dx:Ly; %yGrid
+Lx = 1.0;        % Domain Length in x 
+Ly = 2.0;        % Domain Length in y 
+Nx = 128;        % Spatial Resolution in x 
+Ny = 256;        % Spatial Resolution in y
+dx = Lx/Nx;      % Spatial Distance Definition in x (NOTE: keep dx = Lx/Nx = Ly/Ny = dy);
 
 
 %
 % SIMULATION PARAMETERS %
 %
-mu = 10;         %Fluid DYNAMIC viscosity (kg / m*s)
-rho = 1000;      %Fluid density (kg/m^3) 
-nu=mu/rho;       %Fluid KINEMATIC viscosity
-numPredCorr = 3; %Number of Predictor-Corrector Steps
-maxIter=200;     %Maximum Iterations for SOR Method to solve Elliptic Pressure Equation
-beta=1.25;       %Relaxation Parameter 
+mu = 1;          % Fluid DYNAMIC viscosity (kg / m*s) (mu=1000,100,10,1 for Re=4,40,400,4000 respectively)
+rho = 1000;      % Fluid DENSITY(kg/m^3) 
+nu=mu/rho;       % Fluid KINEMATIC viscosity
+numPredCorr = 3; % Number of Predictor-Corrector Steps
+maxIter=200;     % Maximum Iterations for SOR Method to solve Elliptic Pressure Equation
+beta=1.25;       % Relaxation Parameter 
 
 
 %
 % Initialize all storage quantities %
 %
-[u, v, p, uTemp, vTemp, uAvg, vAvg, vorticity, c] = initialize_Storage(nx,ny);
+[u, v, p, uTemp, vTemp, uAvg, vAvg, vorticity, c] = initialize_Storage(Nx,Ny);
 
 
 %
 % CHOOSE SIMULATION (gives chosen simulation parameters) %
-% Possible choices: 'cavity_left', 'whirlwind', 'twoSide_same', 'twoSide_opp', 'corner'
+% Possible choices: 'cavity_top', 'whirlwind', 'twoSide_same', 'twoSide_opp', 'corner'
 %
-choice = 'cavity_left';
+choice = 'cavity_top';
+
+
+%
+% Returns Boundary Conditions (BCs) and Other Simulation Parameters for
+% specific choice above
+%
 [uTop,uBot,vRight,vLeft,dt,nStep,pStep,bVel,xStart,yStart] = please_Give_Me_BCs(choice);
 
 
 %PRINT SIMULATION INFO %
-print_Simulation_Info(choice,dt,dx,nu,bVel,Ly); 
+print_Simulation_Info(choice,dt,dx,nu,bVel,Lx,Ly); 
 
 
-% SAVING DATA TO VTK %
-print_dump = 80;
-ctsave = 0;
-% CREATE VIZ_IB2D FOLDER and VISIT FILES
-mkdir('vtk_data');
-print_vtk_files(ctsave,u,v,p,vorticity,Lx,Ly,nx,ny);
+
+% SAVING INITIAL DATA TO VTK %
+print_dump = 200;   % Saves data every print_dump time-steps
+ctsave = 0;         % Keeps track of total time-steps
+pCount = 0;         % Counter for # of time-steps saved for indexing data
+mkdir('vtk_data');  % Create vtk_data FOLDER for .vtk data
+print_vtk_files(pCount,u,v,p,vorticity,Lx,Ly,Nx,Ny);
 
 
 
@@ -83,43 +91,48 @@ print_vtk_files(ctsave,u,v,p,vorticity,Lx,Ly,nx,ny);
 t=0.0; %Initialize time
 for j=1:nStep
     
-    %Enforce Boundary Conditions (Solve for "ghost velocities")
-    u(1:nx+1,1)= (2*uBot-u(1:nx+1,2) )*tanh(0.25*t);
-    u(1:nx+1,ny+2)= (2*uTop-u(1:nx+1,ny+1) )*tanh(0.25*t);
-    v(1,1:ny+1)= (2*vLeft-v(2,1:ny+1))*tanh(0.25*t);
-    v(nx+2,1:ny+1)= (2*vRight-v(nx+1,1:ny+1) )*tanh(0.25*t);
+    %
+    % Enforce Boundary Conditions (Solve for "ghost velocities")
+    %        Note: tanh() used to ramp up flow appropriately
+    %
+    u(1:Nx+1,1)= (2*uBot-u(1:Nx+1,2) )*tanh(0.25*t);
+    u(1:Nx+1,Ny+2)= (2*uTop-u(1:Nx+1,Ny+1) )*tanh(0.25*t);
+    v(1,1:Ny+1)= (2*vLeft-v(2,1:Ny+1))*tanh(0.25*t);
+    v(Nx+2,1:Ny+1)= (2*vRight-v(Nx+1,1:Ny+1) )*tanh(0.25*t);
 
-    %Start Predictor-Corrector Steps
+    % Start Predictor-Corrector Steps
     for k=1:numPredCorr
     
         %Find auxillary (temporary) velocity fields for predictor step
-        [uTemp, vTemp] = give_Auxillary_Velocity_Fields(dt,dx,nu,nx,ny,u,v,uTemp,vTemp);
+        [uTemp, vTemp] = give_Auxillary_Velocity_Fields(dt,dx,nu,Nx,Ny,u,v,uTemp,vTemp);
     
         %Solve Elliptic Equation for Pressure via SOR scheme
-        p = solve_Elliptic_Pressure_Equation(dt,dx,nx,ny,maxIter,beta,c,uTemp,vTemp,p);
+        p = solve_Elliptic_Pressure_Equation(dt,dx,Nx,Ny,maxIter,beta,c,uTemp,vTemp,p);
 
         % Velocity Correction
-        u(2:nx,2:ny+1)=uTemp(2:nx,2:ny+1)-(dt/dx)*(p(3:nx+1,2:ny+1)-p(2:nx,2:ny+1));
-        v(2:nx+1,2:ny)=vTemp(2:nx+1,2:ny)-(dt/dx)*(p(2:nx+1,3:ny+1)-p(2:nx+1,2:ny));
+        u(2:Nx,2:Ny+1)=uTemp(2:Nx,2:Ny+1)-(dt/dx)*(p(3:Nx+1,2:Ny+1)-p(2:Nx,2:Ny+1));
+        v(2:Nx+1,2:Ny)=vTemp(2:Nx+1,2:Ny)-(dt/dx)*(p(2:Nx+1,3:Ny+1)-p(2:Nx+1,2:Ny));
     end
     
     %Update Simulation Time (not needed in algorithm)
     t=t+dt;
     
-    % PLOTTING IN MATLAB
+    %
+    % UNCOMMENT to PLOT in MATLAB 
     %if ( mod(j,pStep) == 0 )
     %    fprintf('Simulation Time: %d\n',t);
-        
-        %Plot Timestep Velocity Fields and Vorticity
-    %    plot_Velocity_and_Vorticity(dx,nx,ny,xGrid,yGrid,u,v,uAvg,vAvg,vorticity,xStart,yStart);
+    %    
+    %    %Plot Timestep Velocity Fields and Vorticity
+    %    plot_Velocity_and_Vorticity(dx,Nx,Ny,xGrid,yGrid,u,v,uAvg,vAvg,vorticity,xStart,yStart);
     %end
     
 
     % Save files info!
     ctsave = ctsave + 1;
     if mod(ctsave,print_dump) == 0
-        vorticity(1:nx+1,1:ny+1)=(u(1:nx+1,2:ny+2)-u(1:nx+1,1:ny+1)-v(2:nx+2,1:ny+1)+v(1:nx+1,1:ny+1))/(2*dx); 
-        print_vtk_files(ctsave,u,v,p,vorticity,Lx,Ly,nx,ny);
+        pCount = pCount + 1;
+        vorticity(1:Nx+1,1:Ny+1)=(u(1:Nx+1,2:Ny+2)-u(1:Nx+1,1:Ny+1)-v(2:Nx+2,1:Ny+1)+v(1:Nx+1,1:Ny+1))/(2*dx); 
+        print_vtk_files(pCount,u,v,p,vorticity,Lx,Ly,Nx,Ny);
         fprintf('Simulation Time: %d\n',t);
     end
 
@@ -133,30 +146,30 @@ end %ENDS TIME-STEPPING
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [u, v, p, uTemp, vTemp, uAvg, vAvg, vorticity, c] = initialize_Storage(nx,ny)
+function [u, v, p, uTemp, vTemp, uAvg, vAvg, vorticity, c] = initialize_Storage(Nx,Ny)
 
     %Initialize (u,v) velocities, pressure
-    u=zeros(nx+1,ny+2);      %x-velocity (u) initially zero on grid
-    v=zeros(nx+2,ny+1);      %y-velocity (v) initially zero on grid
-    p=zeros(nx+2,ny+2);      %pressure initially zero on grid
-    uTemp=zeros(nx+1,ny+2);  %auxillary x-Velocity (u*) field initially zero on grid
-    vTemp=zeros(nx+2,ny+1);  %auxillary y-Velocity (v*) field initially zero on grid
+    u=zeros(Nx+1,Ny+2);      % x-velocity (u) initially zero on grid
+    v=zeros(Nx+2,Ny+1);      % y-velocity (v) initially zero on grid
+    p=zeros(Nx+2,Ny+2);      % pressure initially zero on grid
+    uTemp=zeros(Nx+1,Ny+2);  % auxillary x-Velocity (u*) field initially zero on grid
+    vTemp=zeros(Nx+2,Ny+1);  % auxillary y-Velocity (v*) field initially zero on grid
 
     %Initialize quantities for plotting
-    uAvg=zeros(nx+1,ny+1);      %uAvg: averaged x-Velocities on grid (smoothing)
-    vAvg=zeros(nx+1,ny+1);      %vAvg: averaged y-Velocities on grid (smoothing)
-    vorticity=zeros(nx+1,ny+1); %w: Vorticity
+    uAvg=zeros(Nx+1,Ny+1);      % uAvg: averaged x-Velocities on grid (smoothing)
+    vAvg=zeros(Nx+1,Ny+1);      % vAvg: averaged y-Velocities on grid (smoothing)
+    vorticity=zeros(Nx+1,Ny+1); % w: Vorticity
 
     %Coefficients when solving the Elliptic Pressure Equation w/ SOR (so averaging is consistent)
-    c=1/4*ones(nx+2,ny+2);   %Interior node coefficients set to 1/4 (all elements exist)
-    c(2,3:ny)=1/3;           %BouTopdary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
-    c(nx+1,3:ny)=1/3;        %BouTopdary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
-    c(3:nx,2)=1/3;           %BouTopdary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
-    c(3:nx,ny+1)=1/3;        %BouTopdary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
-    c(2,2)=1/2;              %Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
-    c(2,ny+1)=1/2;           %Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
-    c(nx+1,2)=1/2;           %Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
-    c(nx+1,ny+1)=1/2;        %Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
+    c=1/4*ones(Nx+2,Ny+2);   % Interior node coefficients set to 1/4 (all elements exist)
+    c(2,3:Ny)=1/3;           % Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
+    c(Nx+1,3:Ny)=1/3;        % Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
+    c(3:Nx,2)=1/3;           % Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
+    c(3:Nx,Ny+1)=1/3;        % Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
+    c(2,2)=1/2;              % Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
+    c(2,Ny+1)=1/2;           % Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
+    c(Nx+1,2)=1/2;           % Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
+    c(Nx+1,Ny+1)=1/2;        % Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -165,19 +178,19 @@ function [u, v, p, uTemp, vTemp, uAvg, vAvg, vorticity, c] = initialize_Storage(
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [uTemp, vTemp] = give_Auxillary_Velocity_Fields(dt,dx,nu,nx,ny,u,v,uTemp,vTemp)
+function [uTemp, vTemp] = give_Auxillary_Velocity_Fields(dt,dx,nu,Nx,Ny,u,v,uTemp,vTemp)
     
 
     %Find Temporary u-Velocity Field
-    for i=2:nx 
-        for j=2:ny+1 
+    for i=2:Nx 
+        for j=2:Ny+1 
             uTemp(i,j)=u(i,j)+dt*(-(0.25/dx)*((u(i+1,j)+u(i,j))^2-(u(i,j)+u(i-1,j))^2+(u(i,j+1)+u(i,j))*(v(i+1,j)+v(i,j))-(u(i,j)+u(i,j-1))*(v(i+1,j-1)+v(i,j-1)))+(nu/dx^2)*(u(i+1,j)+u(i-1,j)+u(i,j+1)+u(i,j-1)-4*u(i,j)));
         end
     end
 
     %Find Temporary v-Velocity Field
-    for i=2:nx+1
-        for j=2:ny 
+    for i=2:Nx+1
+        for j=2:Ny 
             vTemp(i,j)=v(i,j)+dt*(-(0.25/dx)*((u(i,j+1)+u(i,j))*(v(i+1,j)+v(i,j))-(u(i-1,j+1)+u(i-1,j))*(v(i,j)+v(i-1,j))+(v(i,j+1)+v(i,j))^2-(v(i,j)+v(i,j-1))^2)+(nu/dx^2)*(v(i+1,j)+v(i-1,j)+v(i,j+1)+v(i,j-1)-4*v(i,j)));
         end
     end
@@ -189,13 +202,13 @@ function [uTemp, vTemp] = give_Auxillary_Velocity_Fields(dt,dx,nu,nx,ny,u,v,uTem
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function p = solve_Elliptic_Pressure_Equation(dt,dx,nx,ny,maxIter,beta,c,uTemp,vTemp,p)
+function p = solve_Elliptic_Pressure_Equation(dt,dx,Nx,Ny,maxIter,beta,c,uTemp,vTemp,p)
 
     iter = 1; err = 1; tol = 5e-6;
     pPrev = p;
     while ( (err > tol) && (iter < maxIter) )     
-        for i=2:nx+1 
-            for j=2:ny+1
+        for i=2:Nx+1 
+            for j=2:Ny+1
                 p(i,j)=beta*c(i,j)*(p(i+1,j)+p(i-1,j)+p(i,j+1)+p(i,j-1)-(dx/dt)*(uTemp(i,j)-uTemp(i-1,j)+vTemp(i,j)-vTemp(i,j-1)))+(1-beta)*p(i,j);
             end
         end
@@ -212,7 +225,7 @@ function p = solve_Elliptic_Pressure_Equation(dt,dx,nx,ny,maxIter,beta,c,uTemp,v
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
     
-function plot_Velocity_and_Vorticity(dx,nx,ny,xGrid,yGrid,u,v,uAvg,vAvg,vorticity,xStart,yStart)
+function plot_Velocity_and_Vorticity(dx,Nx,Ny,xGrid,yGrid,u,v,uAvg,vAvg,vorticity,xStart,yStart)
 
     %Plot Info
     xF = xGrid(1);   %Left most x-Point
@@ -221,14 +234,14 @@ function plot_Velocity_and_Vorticity(dx,nx,ny,xGrid,yGrid,u,v,uAvg,vAvg,vorticit
     yL = yGrid(end); %Top most y-Point
     
     %Compute x and y directed velocity averages (interpolate from cell-staggered to grid points)
-    uAvg(1:nx+1,1:ny+1)=0.5*(u(1:nx+1,2:ny+2)+u(1:nx+1,1:ny+1));
-    vAvg(1:nx+1,1:ny+1)=0.5*(v(2:nx+2,1:ny+1)+v(1:nx+1,1:ny+1));
+    uAvg(1:Nx+1,1:Ny+1)=0.5*(u(1:Nx+1,2:Ny+2)+u(1:Nx+1,1:Ny+1));
+    vAvg(1:Nx+1,1:Ny+1)=0.5*(v(2:Nx+2,1:Ny+1)+v(1:Nx+1,1:Ny+1));
 
     %Compute magnitude of velocity
     velMag = sqrt( uAvg.*uAvg + vAvg.*vAvg );
     
     %Compute Vorticity
-    vorticity(1:nx+1,1:ny+1)=(u(1:nx+1,2:ny+2)-u(1:nx+1,1:ny+1)-v(2:nx+2,1:ny+1)+v(1:nx+1,1:ny+1))/(2*dx); 
+    vorticity(1:Nx+1,1:Ny+1)=(u(1:Nx+1,2:Ny+2)-u(1:Nx+1,1:Ny+1)-v(2:Nx+2,1:Ny+1)+v(1:Nx+1,1:Ny+1))/(2*dx); 
     
     %Scale Factor for Velocity Vectors
     scale = 0.19;
@@ -259,21 +272,23 @@ function plot_Velocity_and_Vorticity(dx,nx,ny,xGrid,yGrid,u,v,uAvg,vAvg,vorticit
 %
 % Function that chooses which simulation to run by changing the BCs
 %
+%          NOTE: all velocities normal to the boundary are zero.
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
 function [uTop,uBot,vRight,vLeft,dt,nStep,printStep,bVel,xStart,yStart] = please_Give_Me_BCs(choice)
 
-% Possible choices: 'cavity_left', 'whirlwind', 'twoSide_same', 'twoSide_opp', 'corner'
+% Possible choices: 'cavity_top', 'whirlwind', 'twoSide_same', 'twoSide_opp', 'corner'
 
-if strcmp(choice,'cavity_left')
+if strcmp(choice,'cavity_top')
     
     bVel = 4.0;
-    uTop = 0.0; uBot = 0.0; vRight = 0.0; vLeft = bVel;
+    uTop = bVel; uBot = 0.0; vRight = 0.0; vLeft = 0;
 
-    endTime = 6.0;
-    dt = 0.00125;                  %Time-step
-    nStep=floor(endTime/dt);      %Number of Time-Steps
-    printStep = 5;                %Print ever # of printStep frames
+    endTime = 6.0;                % Final time in simulation
+    dt = 0.001;                   % Time-step (5e-5 for Re4, 1e-4 for Re40, 1e-3 for Re400+Re4000)
+    nStep=floor(endTime/dt);      % Number of Time-Steps
+    printStep = 10;               % Plot data (MATLAB) every # of printStep frames
     
     % Streamlines Info %
     xStart = [0.1 0.5 0.7];
@@ -284,9 +299,10 @@ elseif strcmp(choice,'whirlwind')
     bVel = 1.0;
     uTop=bVel;  uBot=-bVel; vRight=-bVel; vLeft=bVel;
     
-    dt = 0.01;      %Time-step
-    nStep=150;      %Number of Time-Steps
-    printStep = 2;  %Print ever # of printStep frames
+    endTime = 12;           % Final time in simulation
+    dt = 0.001;              % Time-step
+    nStep=floor(endTime/dt); % Number of Time-Steps
+    printStep = 10;  % Plot data (MATLAB) every # of printStep frames
     
     % Streamlines Info %
     yStart = 0.10:0.15:0.40;
@@ -297,9 +313,9 @@ elseif strcmp(choice,'twoSide_same')
     bVel = 2.0;
     uTop = 0.0; uBot = 0.0; vRight = bVel; vLeft = bVel;
     
-    dt = 0.01;      %Time-step
-    nStep=300;      %Number of Time-Steps
-    printStep = 3;  %Print ever # of printStep frames
+    dt = 0.01;      % Time-step
+    nStep=300;      % Number of Time-Steps
+    printStep = 3;  % Plot data (MATLAB) every # of printStep frames
     
     % Streamlines Info %
     xStart = [0.1 0.5 1.55 1.9];
@@ -311,9 +327,9 @@ elseif strcmp(choice,'twoSide_opp')
     bVel = 2.0;
     uTop = 0.0; uBot = 0.0; vRight = -bVel; vLeft = bVel;
     
-    dt = 0.01;      %Time-step
-    nStep=300;      %Number of Time-Steps
-    printStep = 3;  %Print ever # of printStep frames
+    dt = 0.01;      % Time-step
+    nStep=300;      % Number of Time-Steps
+    printStep = 3;  % Plot data (MATLAB) every # of printStep frames
     
     % Streamlines Info %
     xStart = [0.1 0.5 0.9 1.1 1.55 1.9];
@@ -324,9 +340,9 @@ elseif strcmp(choice,'corner')
     bVel = 1.0;
     uTop = bVel; uBot = 0.0; vRight = 0; vLeft = bVel;
     
-    dt = 0.01;      %Time-step
-    nStep=300;      %Number of Time-Steps
-    printStep = 3;  %Print ever # of printStep frames
+    dt = 0.01;      % Time-step
+    nStep=300;      % Number of Time-Steps
+    printStep = 3;  % Plot data (MATLAB) every # of printStep frames
     
     % Streamlines Info %
     yStart = 0.10:0.15:0.55;
@@ -340,9 +356,9 @@ else
     bVel = 1.0;
     uTop=bVel;  uBot=-bVel; vRight=-bVel; vLeft=bVel;
     
-    dt = 0.01;      %Time-step
-    nStep=150;      %Number of Time-Steps
-    printStep = 2;  %Print ever # of printStep frames
+    dt = 0.01;      % Time-step
+    nStep=150;      % Number of Time-Steps
+    printStep = 2;  % Plot data (MATLAB) every # of printStep frames
     
     % Streamlines Info %
     yStart = 0.10:0.15:0.40;
@@ -364,7 +380,7 @@ fprintf('\nSolves the Navier-Stokes equations in the Velocity-Pressure formulati
 fprintf('using a predictor-corrector projection method approach\n\n');
 fprintf('Author: Nicholas A. Battista\n');
 fprintf('Created: Novermber 24, 2014\n');
-fprintf('Modified: December 8, 2014\n');
+fprintf('Modified: September 11, 2019\n');
 fprintf('____________________________________________________________________________\n\n');
 fprintf('Equations of Motion:\n');
 fprintf('Du/Dt = -Nabla(u) + nu*Laplacian(u)  [Conservation of Momentum] \n');
@@ -387,10 +403,10 @@ fprintf('_______________________________________________________________________
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function print_Simulation_Info(choice,dt,dx,nu,bVel,Ly)
+function print_Simulation_Info(choice,dt,dx,nu,bVel,Lx,Ly)
 
 % PRINT STABILITY INFO %
-fprintf('\nNOTE: dt must be <= %d for STABILITY!\n',0.25*dx^2/nu);
+fprintf('\nNOTE: dt must be <= %d for any chance of STABILITY!\n',0.25*dx^2/nu);
 fprintf('Your dt = %d\n\n',dt);
 
 if strcmp(choice,'cavity_left')
@@ -403,7 +419,7 @@ elseif strcmp(choice,'whirlwind')
     
     fprintf('You are simulating vortical flow\n');
     fprintf('All velocities on the wall point at the next corner in a CW manner\n');
-    fprintf('Try changing the velocity BCs on each wall');
+    fprintf('Try changing the velocity BCs on each wall\n');
     fprintf('Or try changing the viscosity or geometry\n\n');
     
 elseif strcmp(choice,'twoSide_same')
@@ -434,5 +450,5 @@ else
 end
 
 %Prints Re Number %
-fprintf('\nYour Re is: %d\n\n',Ly*bVel/nu);
+fprintf('\nYour Re is: %d\n\n',Lx*bVel/nu);
 fprintf('____________________________________________________________________________\n\n');
