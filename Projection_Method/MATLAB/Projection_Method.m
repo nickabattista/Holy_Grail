@@ -299,10 +299,10 @@ elseif strcmp(choice,'whirlwind')
     bVel = 1.0;
     uTop=bVel;  uBot=-bVel; vRight=-bVel; vLeft=bVel;
     
-    endTime = 12;           % Final time in simulation
+    endTime = 12;            % Final time in simulation
     dt = 0.001;              % Time-step
     nStep=floor(endTime/dt); % Number of Time-Steps
-    printStep = 10;  % Plot data (MATLAB) every # of printStep frames
+    printStep = 10;          % Plot data (MATLAB) every # of printStep frames
     
     % Streamlines Info %
     yStart = 0.10:0.15:0.40;
