@@ -3,8 +3,8 @@
 % 2D LATTICE BOLTZMANN (LBM) SIMULATION 
 % Author: Nicholas A. Battista
 % Created: 11/4/2014  (MATLAB)
-% Modified: September 13, 2019 (MATLAB)
 % Created: 5/5/2017   (Python3)
+% Modified: September 13, 2019 (MATLAB, Python)
 %
 %  D2Q9 Model:
 %  c6  c2   c5  
@@ -35,10 +35,10 @@ print_LBM_Info();
 %
 % Simulation Parameters
 %
-tau=0.53;                     % tau: relaxation parameter related to viscosity
-density=0.01;                 % density to be used for initializing whole grid to value 1.0
+tau=0.54;                    % tau: relaxation parameter related to viscosity
+density=0.01;                % density to be used for initializing whole grid to value 1.0
 w1=4/9; w2=1/9; w3=1/36;      % weights for finding equilibrium distribution
-Nx=512; Ny=128;               % number of grid cells in x and y directions, respectively
+Nx=640; Ny=160;               % number of grid cells in x and y directions, respectively
 Lx = 2; Ly = 0.5;             % Size of computational domain
 dx = Lx/Nx; dy = Ly/Ny;       % Grid Resolution in x and y directions, respectively
 
@@ -57,16 +57,16 @@ CI= 0:grid_size:7*grid_size;  % Indices to point to FIRST entry of the desired "
 %
 % Possible Choices: 'cylinder1', 'cylinder2', 'channel', 'porous1', 'porous2'
 %
-choice = 'cylinder2';
+choice = 'cylinder1';
 percentPorosity = 0.7;  % Percent of Domain that's Porous (does not matter if not studying porous problem)
-[BOUND,deltaU,endTime] = give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity); %BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
+[BOUND,Bound2,deltaU,endTime] = give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity); %BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
 print_simulation_info(choice);
 
 
 
 %Find Indices of NONZERO Elements, i.e., where "boundary points" IS
 ON=find(BOUND');      %matrix index of each Occupied Node (need transpose due to (x,y) matrix convention, e.g., row-id = x, col-id = y)
-ON_geo = find(BOUND); %matrix index of each Occupied Node
+ON_geo = find(Bound2); %matrix index of each Occupied Node
 
 % Give Boundary Points For Saving Data
 Bound_Pts = give_Me_Boundary_Pts_For_Visualization(dx,dy,Nx,Ny,Lx,Ly,ON_geo);
@@ -81,9 +81,8 @@ REFLECTED= [ON+CI(3) ON+CI(4) ON+CI(1) ON+CI(2) ON+CI(7) ON+CI(8) ON+CI(5) ON+CI
 ts=0;                             %initialize starting time to 0 (time-step)
 fprintf('Simulation Time: %d\n',ts);
 
-
 % SAVING DATA TO VTK %
-print_dump = floor(endTime/50);
+print_dump = 400;%floor(endTime/50);
 ctsave = 0; % Counts # of total time-steps
 pSave = 0;  % Counts # of time-steps with data saved
 
@@ -115,8 +114,8 @@ while ts < endTime
     
     
     %Increase inlet velocity with each time step along left wall
-    UX(1,1:Ny)=UX(1,1:Ny) + deltaU;
-    
+    UX(1,2:Ny-1) = UX(1,2:Ny-1) + deltaU;
+   
     
     %Enforce BCs to Zero Velocity / Zero Density
     UX(ON)=0;      %Makes all Boundary Regions have zero x-velocity 
@@ -160,7 +159,7 @@ while ts < endTime
         % print to vtk
         print_vtk_files(pSave,UX,UY,vorticity,Lx,Ly,Nx,Ny,Bound_Pts);
         fprintf('Simulation Time: %d\n',ts);
-    
+            
     end
     
 end
@@ -177,7 +176,7 @@ plot_Steady_State(UX,UY,BOUND,Nx,Ny,ts,choice);
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [BOUND, deltaU, endTime] = give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity)
+function [BOUND, Bound2, deltaU, endTime] = give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity)
 
 
 if strcmp(choice,'cylinder1')
@@ -185,17 +184,18 @@ if strcmp(choice,'cylinder1')
     %
     % FLOW PAST CYLINDER EXAMPLE
     % 
-    % WORKS WELL: [Nx,Ny]=[320,320], tau=0.53, density = 0.01
+    % WORKS WELL: <faster, less accurate> [Nx,Ny]=[128,512], tau=0.53, density = 0.01, endTime = 5500
+    %             <slower, more accurate> [Nx,Ny]=[256,1024],tau=0.55, density = 0.01
     
     % radius of cylinder (centered in middle of domain, given in terms of mesh widths)
-    r = 0.125*Ny;
+    r = 0.075*Ny;
     
     % Creates (x,y)-proxy to define geometry upon (based on 1:1:Nx, 1:1:Ny)
     a1=repmat(-(Nx-1)/2:(Nx-1)/2,[Ny,1]); 
     a2=repmat(-(Ny-1)/2:(Ny-1)/2,[Nx,1]);
     
     % Amount to translate cylinder from middle of domain
-    aR = floor(0.25*Nx);                
+    aR = floor(0.375*Nx);                
     
     % CREATE CYLINDER GEOMETRY (Note: "+" shifts left bc of defining circles)
     BOUND=( (a1+aR).^2+(a2)'.^2)<r^2;   % Puts "1's" within region of Cylinder 
@@ -204,15 +204,17 @@ if strcmp(choice,'cylinder1')
     BOUND([1 Ny],1:Nx)=1;               % Puts "1's" on Top/Bottom Boundaries
     
     % Simulation characteristics
-    deltaU = 0.01;                      % Incremental increase to inlet velocity
-    endTime = 4000;                     % Total Number of Time-Steps
+    deltaU = 0.00125;                     % Incremental increase to inlet velocity
+    endTime = 56000;                      % Total Number of Time-Steps
     
 elseif strcmp(choice,'cylinder2')
 
     %
     % FLOW PAST MULTIPLE CYLINDERs EXAMPLE
     % 
-    % WORKS WELL: [Nx,Ny]=[320,320], tau=0.53, density = 0.01
+    % WORKS WELL: <faster, less accurate> [Nx,Ny]=[128,512], tau=0.53, density = 0.01, endTime = 5500
+    %             <slower, more accurate> [Nx,Ny]=[256,1024],tau=0.55, density = 0.01, endTime = 100000
+
     
     % radius of bubble (centered in middle of domain, given in terms of mesh widths)
     r = 0.125*Ny;
@@ -232,14 +234,15 @@ elseif strcmp(choice,'cylinder2')
     B3 =( (a1+aR-aSx).^2+(a2+aY)'.^2)<r^2;   % Puts "1's" within region of Cylinder  
 
     % COMBINE together all cylinder geometry information
-    BOUND = double(B1)+double(B2)+double(B3);          
-        
+    %BOUND = double(B1)+double(B2)+double(B3);          
+    BOUND = double(B1)+double(B3);          
+   
     % CREATE TOP/BOTTOM BOUNDARIES
     BOUND([1 Ny],1:Nx)=1;               % Puts "1's" on Top/Bottom Boundaries    
     
     % Simulation characteristics
     deltaU = 0.01;                                    % Incremental increase to inlet velocity
-    endTime = 4000;                                   % Total Number of Time-Steps
+    endTime = 5500;                                   % Total Number of Time-Steps
 
 elseif strcmp(choice,'channel')
     
@@ -279,6 +282,13 @@ elseif strcmp(choice,'porous2')
 end
 
 
+%
+% Reverse Order of BOUND for GEOMETRY (top is initialized as bottom and vice versa)
+%
+Bound2=zeros( size(BOUND) );
+for i=0:Ny-1
+    Bound2(i+1,:) = BOUND(Ny-i,:);
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
