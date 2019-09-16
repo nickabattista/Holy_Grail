@@ -35,10 +35,10 @@ print_FFT_NS_Info();
 % Simulation Parameters
 %
 nu=1.0e-3;  % kinematic viscosity
-NX = 512;   % # of grid points in x
-NY = 256;   % # of grid points in y
+NX = 512;   % # of grid points in x 
+NY = 256;   % # of grid points in y   % 512 for qtrs
 LX = 1;     % 'Length' of x-Domain
-LY = 0.5;   % 'Length' of y-Domain
+LY = 0.5;   % 'Length' of y-Domain    % 1 for qtrs
 
 %
 % Choose initial vorticity state
@@ -69,7 +69,9 @@ for n=0:nTot      %Enter Time-Stepping Loop!
         v  =real(ifft2(-kMatx.*psi_hat));        % Compute -x derivative of stream function ==> v = -psi_x
         
         % SAVING DATA TO VTK %
-        ctsave = 0;
+        ctsave = 0; % total # of time-steps
+        pSave = 0;  % time-step data counter
+        
         % CREATE VIZ_IB2D FOLDER and VISIT FILES
         mkdir('vtk_data');
             
@@ -78,7 +80,7 @@ for n=0:nTot      %Enter Time-Stepping Loop!
 
         % Save .vtk data!
         % Note: switch order of u and v in this function bc of notation-> f(x,y) here rather than matrix convention of y(row,col) w/ y=row, x=col
-        print_vtk_files(ctsave,v,u,vort_real,LX,LY,NX,NY);
+        print_vtk_files(pSave,v,u,vort_real,LX,LY,NX,NY);
    
     else
     
@@ -129,12 +131,15 @@ for n=0:nTot      %Enter Time-Stepping Loop!
         ctsave = ctsave + 1;
         if mod(ctsave,plot_dump) == 0
 
+            % increment Print counter
+            pSave = pSave + 1;
+            
             % Transform back to real space via Inverse-FFT
             vort_real=real(ifft2(vort_hat));
 
             % Save .vtk data!
             % Note: switch order of u and v in this function bc of notation-> f(x,y) here rather than matrix convention of y(row,col) w/ y=row, x=col
-            print_vtk_files(ctsave,v,u,vort_real,LX,LY,NX,NY);
+            print_vtk_files(pSave,v,u,vort_real,LX,LY,NX,NY);
 
             % Plot simulation time
             fprintf('Simulation Time: %d\n',t);
@@ -159,13 +164,40 @@ if strcmp(choice,'half')
     % USE RECTANGLE: Lx = 2Ly, Nx = 2Ny
     %
     
-    buff = 4;       % # of grid cells around each vortex region (make sure even)
-    vort=zeros(NX,NY);
-    vort(1+buff:NX/2-buff/2,1+buff:end-buff)=1;
-    vort(NX/2+1+buff/2:end-buff,1+buff:end-buff)=1;
+    % radii of vortex regions (given in terms of mesh widths)
+    radius1 = 0.3*NY;
+    radius2 = 0.15*NY;
+    
+    %
+    a1=repmat(-(NX-1)/2:(NX-1)/2,[NY,1]); 
+    a2=repmat(-(NY-1)/2:(NY-1)/2,[NX,1]);    
+    
+    % Amount to translate cylinder from middle of domain
+    aR = floor(0.25*NX);    
+
+    % Form circular regions of vorticity
+    b1 = ( (a1+aR).^2+(a2)'.^2) < radius1^2; 
+    b2 = ( (a1-aR).^2+(a2)'.^2) < radius2^2; 
+
+    % Convert boolean matrix to matrix of double values
+    b1 = double(b1) + double(b2);
+    
+    % Find values where vorticity is
+    [r1,c1]=find(b1==1);
+    
+    vort = zeros(NX,NY);
+    for i=1:length(r1)
+        if c1(i) > NX/2
+            vort(c1(i),r1(i))= -0.05;%0.5*(rand(1)+1);
+        else
+            vort(c1(i),r1(i))= -0.1;%-0.5*(rand(1)+1);
+        end
+    end  
+    
     dt=1e-2;        % time step
     tFinal = 5;     % final time
     plot_dump=20;   % interval for plots
+    
 
 elseif strcmp(choice,'qtrs')
     
@@ -173,28 +205,53 @@ elseif strcmp(choice,'qtrs')
     % SQUARE: Lx = Ly, Nx = Ny
     %
     
-    %
-    % CASE: Flows go in same direction
-    %
-    vort = -0.25*ones(NX,NY);
-    vort(1:NX/2,1:NY/2)=0.25;
-    vort(NX/2+1:end,NY/2+1:end)=0.25;
-    dt=1e-2;      % time step
-    tFinal=5;   % final time
-    plot_dump=20;  % interval for plots'
+    % radii of vortex regions (given in terms of mesh widths)
+    radius11 = 0.2*NY;
+    radius12 = 0.2*NY;
+    radius21 = 0.2*NY;
+    radius22 = 0.2*NY;    
     
     %
-    % CASE: Qtr-boundaries (more mixing)
-    %
-    %buff = 5;
-    %vort = 0.1*(2*rand(NX,NY)-1);
-    %vort(1+buff:NX/2-buff,1+buff:NY/2-buff)=0.1;
-    %vort(1+buff:NX/2-buff,NY/2+1+buff:end-buff)=0.1;
-    %vort(NX/2+1+buff:end,1+buff:NY/2-buff)=-0.1;
-    %vort(NX/2+1+buff:end,NY/2+1+buff:end-buff)=-0.1;
-    %dt=1e-2;      % time step
-    %tFinal=5;     % final time
-    %plot_dump=5;  % interval for plots'
+    a1=repmat(-(NX-1)/2:(NX-1)/2,[NY,1]); 
+    a2=repmat(-(NY-1)/2:(NY-1)/2,[NX,1]);    
+    
+    % Amount to translate cylinder from middle of domain
+    aR = floor(0.25*NX); 
+    aU = floor(0.25*NY);
+
+    % Form circular regions of vorticity
+    b1 = ( (a1+aR).^2+(a2+aU)'.^2) < radius11^2; 
+    b2 = ( (a1-aR).^2+(a2-aU)'.^2) < radius12^2; 
+    b3 = ( (a1+aR).^2+(a2-aU)'.^2) < radius21^2; 
+    b4 = ( (a1-aR).^2+(a2+aU)'.^2) < radius22^2; 
+    
+    % Convert boolean matrix to matrix of double values
+    b1 = double(b1) + double(b2) + double(b3) + double(b4);
+    
+    % Find values where vorticity is
+    [r1,c1]=find(b1==1);
+    
+    vort = zeros(NX,NY);
+    for i=1:length(r1)
+        if c1(i) > NX/2
+            if r1(i) > NY/2
+                vort(c1(i),r1(i))= 0.1;%0.5*(rand(1)+1);
+            else
+                vort(c1(i),r1(i))= -0.1;%0.5*(rand(1)+1);
+            end
+        else
+            if r1(i) > NY/2
+                vort(c1(i),r1(i))= 0.1;%0.5*(rand(1)+1);
+            else
+                vort(c1(i),r1(i))= -0.1;%0.5*(rand(1)+1);
+            end
+        end
+    end  
+    
+    dt=1e-2;        % time step
+    tFinal = 5;     % final time
+    plot_dump=20;   % interval for plots
+    
    
 elseif strcmp(choice,'rand')
     
@@ -214,11 +271,11 @@ elseif strcmp(choice,'bubble1')
     %
     
     % radius of bubble (centered in middle of domain, given in terms of mesh widths)
-    radius = 0.25*(NX/2)^2;
+    radius = 0.25*NX;
     
     vort = 0.25*rand(NX,NY)-0.50;
     a=repmat(-NX/4+1:NX/4,[NY/2 1]);
-    b1 = ( (a-1).^2 +  (a+1)'.^2 ) < radius; %1024
+    b1 = ( (a-1).^2 +  (a+1)'.^2 ) < radius^2; %1024
     b1 = double(b1);
     [r1,c1]=find(b1==1);
     b1 = 0.5*rand(NX/2,NY/2)-0.25;
