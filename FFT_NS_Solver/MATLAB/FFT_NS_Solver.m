@@ -35,16 +35,16 @@ print_FFT_NS_Info();
 % Simulation Parameters
 %
 nu=1.0e-3;  % kinematic viscosity
-NX = 512;   % # of grid points in x 
-NY = 256;   % # of grid points in y   % 512 for qtrs
+NX = 256;   % # of grid points in x 
+NY = 256;   % # of grid points in y   % 256 for half, 512 for qtrs
 LX = 1;     % 'Length' of x-Domain
-LY = 0.5;   % 'Length' of y-Domain    % 1 for qtrs
+LY = 1;   % 'Length' of y-Domain    % 0.5 for half, 1 for qtrs
 
 %
 % Choose initial vorticity state
 % Choices:  'half', 'qtrs', 'rand' ,'bubble1', 'bubble2', 'bubbleSplit'
 %
-choice='half';
+choice='bubble2';
 [vort_hat,dt,tFinal,plot_dump] = please_Give_Initial_Vorticity_State(choice,NX,NY);
 
 %
@@ -323,52 +323,84 @@ elseif strcmp(choice,'bubble2')
     %
     
     % radius of bubble (centered in middle of domain, given in terms of mesh widths)
-    radius1 = 0.25*(NX/2)^2;
-    radius2 = 0.175*(NX/2)^2;
-    radius3 = 0.10*(NX/2)^2;
+    radius1 = 0.25*NX;
+    radius2 = 0.175*NX;
+    radius3 = 0.10*NX;
+    
+    %
+    a1=repmat(-(NX-1)/2:(NX-1)/2,[NY,1]); 
+    a2=repmat(-(NY-1)/2:(NY-1)/2,[NX,1]);    
+    
+    % Amount to translate cylinder from middle of domain
+    aD = floor(0.10*NX); 
+    aR = floor(0.15*NX); 
+
+    % Form circular regions of vorticity
+    b1 = ( (a1).^2+(a2)'.^2) < radius1^2;         % vortex at center of domain
+    b2 = ( (a1).^2+(a2-aD)'.^2) < radius2^2;      % shift 2nd vortex down from center
+    b3 = ( (a1+aR).^2+(a2-2*aD)'.^2) < radius3^2; % shift 3rd vortex down/right from center
     
     %Initialize vort matrix
     vort = 2*rand(NX,NY)-1;
 
-    ex = 0; %Makes sure full bubbles
-    sL = 0; %shift left
-    a1=repmat(-NX/4+(1-ex):NX/4,[NY/2+ex 1]);
-    b1 = ( (a1-1).^2 +  (a1+1)'.^2 ) < radius1;%8*NX+ 2/3*NX;
-    b1 = double(b1);
-    nZ = find(b1);
-    b1(nZ) = 0.8; 
-    [r1,c1]=find(b1==0);
+    % Find values where Largest Vortex is
+    [r1,c1]=find(b1==1);
     for i=1:length(r1)
-        b1(r1(i),c1(i))=  2*rand(1)-1;
+        vort(c1(i),r1(i))=  0.4;
     end
-    vort(NX/4+(1-ex):3*NX/4,NY/4+(1-ex)-sL:3*NY/4-sL) = b1;
-
-    ex = 0;  %Makes sure full bubbles
-    sL = 20; %shift left
-    a2=repmat(-NX/8+(1-ex):NX/8,[NY/4+ex 1]);
-    b2 = ( (a2-1).^2 +  (a2+1)'.^2 ) < radius2; %2*NX+NX/0.75;
-    b2 = double(b2);
-    nZ = find(b2);
-    b2(nZ) = -1.0; 
-    [r2,c2]=find(b2==0);
-    for i=1:length(r2)
-        b2(r2(i),c2(i))=  1.0; 
+    
+    % Find values where 2nd Largest Vortex is
+    [r1,c1]=find(b2==1);
+    for i=1:length(r1)
+        vort(c1(i),r1(i))=  -0.5;
     end
-    vort(3*NX/8+(1-ex):5*NX/8,3*NY/8+(1-ex)-sL:5*NY/8-sL) = b2;
-   
-    ex = 2; %Makes sure full bubbles
-    sR = 8; %shift right
-    sD = 25;%shift down
-    a3=repmat(-NX/16+(1-ex):NX/16,[NY/8+ex 1]);
-    b3 = ( (a3-1).^2 +  (a3+1)'.^2 ) < radius3;%NX/2;
-    b3 = double(b3);
-    nZ=find(b3);
-    b3(nZ)= 1.0; 
-    [r3,c3]=find(b3==0);
-    for j=1:length(r3)
-        b3(r3(j),c3(j)) =  -1.0; 
+    
+    % Find values where 3rd Largest Vortex is (smallest)
+    [r1,c1]=find(b3==1);
+    for i=1:length(r1)
+        vort(c1(i),r1(i))=  0.5;
     end
-    vort(7*NX/16+(1-ex)-sD:9*NX/16-sD,7*NY/16+(1-ex)+sR:9*NY/16+sR) = b3;
+    
+    
+%     ex = 0; %Makes sure full bubbles
+%     sL = 0; %shift left
+%     a1=repmat(-NX/4+(1-ex):NX/4,[NY/2+ex 1]);
+%     b1 = ( (a1-1).^2 +  (a1+1)'.^2 ) < radius1^2;%8*NX+ 2/3*NX;
+%     b1 = double(b1);
+%     nZ = find(b1);
+%     b1(nZ) = 0.8; 
+%     [r1,c1]=find(b1==0);
+%     for i=1:length(r1)
+%         b1(r1(i),c1(i))=  2*rand(1)-1;
+%     end
+%     vort(NX/4+(1-ex):3*NX/4,NY/4+(1-ex)-sL:3*NY/4-sL) = b1;
+% 
+%     ex = 0;  %Makes sure full bubbles
+%     sL = 20; %shift left
+%     a2=repmat(-NX/8+(1-ex):NX/8,[NY/4+ex 1]);
+%     b2 = ( (a2-1).^2 +  (a2+1)'.^2 ) < radius2^2; %2*NX+NX/0.75;
+%     b2 = double(b2);
+%     nZ = find(b2);
+%     b2(nZ) = -1.0; 
+%     [r2,c2]=find(b2==0);
+%     for i=1:length(r2)
+%         b2(r2(i),c2(i))=  1.0; 
+%     end
+%     vort(3*NX/8+(1-ex):5*NX/8,3*NY/8+(1-ex)-sL:5*NY/8-sL) = b2;
+%    
+%     ex = 2; %Makes sure full bubbles
+%     sR = 8; %shift right
+%     sD = 25;%shift down
+%     a3=repmat(-NX/16+(1-ex):NX/16,[NY/8+ex 1]);
+%     b3 = ( (a3-1).^2 +  (a3+1)'.^2 ) < radius3^2;%NX/2;
+%     b3 = double(b3);
+%     nZ=find(b3);
+%     b3(nZ)= 1.0; 
+%     [r3,c3]=find(b3==0);
+%     for j=1:length(r3)
+%         b3(r3(j),c3(j)) =  -1.0; 
+%     end
+%     vort(7*NX/16+(1-ex)-sD:9*NX/16-sD,7*NY/16+(1-ex)+sR:9*NY/16+sR) = b3;
     
     dt = 1e-2;      % time step
     tFinal = 30;    % final time
