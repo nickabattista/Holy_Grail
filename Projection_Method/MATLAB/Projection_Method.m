@@ -8,8 +8,8 @@
 % Modified: September 11, 2019
 % 
 % Equations of Motion:
-% Du/Dt = -Nabla(P) + nu*Laplacian(u)  [Conservation of Momentum]
-% Nabla \cdot u = 0                    [Conservation of Mass]                                   
+% rho Du/Dt = -Nabla(P) + mu*Laplacian(u)  [Conservation of Momentum]
+% Nabla \cdot u = 0                        [Conservation of Mass]                                   
 %
 %
 % IDEA: for each time-step
@@ -39,16 +39,23 @@ Nx = 128;        % Spatial Resolution in x
 Ny = 256;        % Spatial Resolution in y
 dx = Lx/Nx;      % Spatial Distance Definition in x (NOTE: keep dx = Lx/Nx = Ly/Ny = dy);
 
-
 %
 % SIMULATION PARAMETERS %
 %
-mu = 1;          % Fluid DYNAMIC viscosity (kg / m*s) (mu=1000,100,10,1 for Re=4,40,400,4000 respectively)
+mu = 1.0;       % Fluid DYNAMIC viscosity (kg / m*s) 
+%                    (mu=1000,100,10,1 for Re=4,40,400,4000 respectively for Cavity Flow examples
+%                    (mu=0.25,1.0,2.5 for Re=4000,1000, and 400, respectively for Circular Flow examples)
 rho = 1000;      % Fluid DENSITY(kg/m^3) 
 nu=mu/rho;       % Fluid KINEMATIC viscosity
 numPredCorr = 3; % Number of Predictor-Corrector Steps
 maxIter=200;     % Maximum Iterations for SOR Method to solve Elliptic Pressure Equation
 beta=1.25;       % Relaxation Parameter 
+
+%
+% CHOOSE SIMULATION (gives chosen simulation parameters) %
+% Possible choices: 'cavity_top', 'whirlwind', 'twoSide_same', 'twoSide_opp', 'corner'
+%
+choice = 'cavity_top';
 
 
 %
@@ -57,11 +64,7 @@ beta=1.25;       % Relaxation Parameter
 [u, v, p, uTemp, vTemp, uAvg, vAvg, vorticity, c] = initialize_Storage(Nx,Ny);
 
 
-%
-% CHOOSE SIMULATION (gives chosen simulation parameters) %
-% Possible choices: 'cavity_top', 'whirlwind', 'twoSide_same', 'twoSide_opp', 'corner'
-%
-choice = 'cavity_top';
+
 
 
 %
@@ -290,7 +293,7 @@ if strcmp(choice,'cavity_top')
     nStep=floor(endTime/dt);      % Number of Time-Steps
     printStep = 10;               % Plot data (MATLAB) every # of printStep frames
     
-    % Streamlines Info %
+    % Streamlines Info (for MATLAB plotting) %
     xStart = [0.1 0.5 0.7];
     yStart = 0.5*ones(size(xStart));
     
@@ -299,12 +302,12 @@ elseif strcmp(choice,'whirlwind')
     bVel = 1.0;
     uTop=bVel;  uBot=-bVel; vRight=-bVel; vLeft=bVel;
     
-    endTime = 12;            % Final time in simulation
+    endTime = 24;            % Final time in simulation
     dt = 0.001;              % Time-step
     nStep=floor(endTime/dt); % Number of Time-Steps
     printStep = 10;          % Plot data (MATLAB) every # of printStep frames
     
-    % Streamlines Info %
+    % Streamlines Info (for MATLAB plotting) %
     yStart = 0.10:0.15:0.40;
     xStart = ones(size(yStart));
     
@@ -317,7 +320,7 @@ elseif strcmp(choice,'twoSide_same')
     nStep=300;      % Number of Time-Steps
     printStep = 3;  % Plot data (MATLAB) every # of printStep frames
     
-    % Streamlines Info %
+    % Streamlines Info (for MATLAB plotting) %
     xStart = [0.1 0.5 1.55 1.9];
     yStart = 0.5*ones(size(xStart));
 
@@ -331,7 +334,7 @@ elseif strcmp(choice,'twoSide_opp')
     nStep=300;      % Number of Time-Steps
     printStep = 3;  % Plot data (MATLAB) every # of printStep frames
     
-    % Streamlines Info %
+    % Streamlines Info (for MATLAB plotting) %
     xStart = [0.1 0.5 0.9 1.1 1.55 1.9];
     yStart = 0.5*ones(size(xStart));
     
@@ -344,7 +347,7 @@ elseif strcmp(choice,'corner')
     nStep=300;      % Number of Time-Steps
     printStep = 3;  % Plot data (MATLAB) every # of printStep frames
     
-    % Streamlines Info %
+    % Streamlines Info (for MATLAB plotting) %
     yStart = 0.10:0.15:0.55;
     xStart = ones(size(yStart));
     
@@ -360,7 +363,7 @@ else
     nStep=150;      % Number of Time-Steps
     printStep = 2;  % Plot data (MATLAB) every # of printStep frames
     
-    % Streamlines Info %
+    % Streamlines Info (for MATLAB plotting) %
     yStart = 0.10:0.15:0.40;
     xStart = ones(size(yStart));
 
