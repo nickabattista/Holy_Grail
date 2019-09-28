@@ -4,6 +4,7 @@
  Author: Nicholas A. Battista
  Created: Novermber 29, 2014 (MATLAB VERSION)
  Created: April 27, 2017 (PYTHON3 VERSION)
+ MODIFIED: September 29, 2019 (PYTHON3 VERSION)
  
  Equations of Motion:
  D (Vorticity) /Dt = nu*Laplacian(Vorticity)  
@@ -42,7 +43,7 @@ def print_FFT_NS_Info():
     print(' formulation using a pseudo-spectral approach w/ FFT \n\n')
     print(' Author: Nicholas A. Battista \n')
     print(' Created: Novermber 29, 2014 \n')
-    print(' Modified: September 11, 2019 \n\n')
+    print(' Modified: September 29, 2019 \n\n')
     print(' Equations of Motion: \n')
     print(' D (Vorticity) /Dt = nu*Laplacian(Vorticity)  \n')
     print(' Laplacian(Psi) = - Vorticity                 \n\n')                                     
@@ -255,6 +256,80 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         tFinal = 1000 # final time
         plot_dump=25  # interval for plots
     
+    elif ( choice == 'bubble1' ):
+        
+        #
+        # USE RECTANGLE: Lx = Ly, Nx = Ny
+        #
+
+        # radii of vortex regions (given in terms of mesh widths)
+        radius1 = 0.25*NX
+
+        # auxillary vectors 
+        xAux = np.arange(-(NX-1)/2, (NX-1)/2+1, 1)
+        yAux = np.arange(-(NY-1)/2, (NY-1)/2+1, 1)
+
+        # stack vectors to create grids of indices
+        a1=np.tile(xAux,(NY,1))
+        a2=np.tile(yAux,(NX,1))          
+
+        # Form circular regions of vorticity
+        b1 = ( (a1)**2+((a2).T)**2) < radius1**2         # region at center of domain
+
+        # Convert to 0,1 boolean matrix from False,True matrix
+        b1 = b1.astype(int)
+
+        # Initialize vorticity in grid to random values between -1,1
+        vort = 2*np.random.rand(NX,NY)-1
+
+        # Find values where largest region is
+        [r1,c1]=np.nonzero(b1)
+        for i in range(0,r1.size):
+            vort[c1[i],r1[i]] = 0.6   
+
+        dt = 1e-2       # time step
+        tFinal = 30     # final time
+        plot_dump= 50   # interval for plots
+
+    elif ( choice == 'bubbleSplit'):
+
+        #
+        # USE RECTANGLE: Lx = Ly, Nx = Ny
+        #
+
+        # radii of vortex regions (given in terms of mesh widths)
+        radius1 = 0.25*NX
+
+        # auxillary vectors 
+        xAux = np.arange(-(NX-1)/2, (NX-1)/2+1, 1)
+        yAux = np.arange(-(NY-1)/2, (NY-1)/2+1, 1)
+
+        # stack vectors to create grids of indices
+        a1=np.tile(xAux,(NY,1))
+        a2=np.tile(yAux,(NX,1))          
+
+        # Form circular regions of vorticity
+        b1 = ( (a1)**2+((a2).T)**2) < radius1**2         # region at center of domain
+
+        # Convert to 0,1 boolean matrix from False,True matrix
+        b1 = b1.astype(int)
+
+        # Initialize vorticity in grid to random values between -1,1
+        vort = 2*np.random.rand(NX,NY)-1
+
+        # Find values where largest region is
+        [r1,c1]=np.nonzero(b1)
+        for i in range(0,r1.size):
+            if c1[i]<= NX/2:
+                vort[c1[i],r1[i]] = -0.5*np.random.rand()   
+            else:
+                vort[c1[i],r1[i]] = 0.5*np.random.rand()  
+
+        dt = 1e-2       # time step
+        tFinal = 30     # final time
+        plot_dump= 50   # interval for plots
+
+
     elif ( choice == 'bubble3' ):
 
         #
@@ -309,62 +384,8 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         dt = 1e-2       # time step
         tFinal = 30     # final time
         plot_dump= 50   # interval for plots
-
-    # WILL WORK ON OTHER EXAMPLES ONCE CODE IS UP AND RUNNING!
-    '''
-    elseif strcmp(choice,'bubble1')
-
-        #
-        # USE SQUARE: Lx = Ly, Nx = Ny
-        #
-
-        #radius of bubble (centered in middle of domain, given in terms of mesh widths)
-        radius = 0.25*(NX/2)^2;
-
-        vort = 0.25*rand(NX,NY)-0.50
-        a=repmat(-NX/4+1:NX/4,[NY/2 1])
-        b1 = ( (a-1).^2 +  (a+1)'.^2 ) < radius
-        b1 = double(b1)
-        [r1,c1]=find(b1==1)
-        b1 = 0.5*rand(NX/2,NY/2)-0.25
-        for i=1:length(r1)
-            b1(r1(i),c1(i))=  0.5*(rand(1)+1)
-        end
-        vort(NX/4+1:3*NX/4,NY/4+1:3*NY/4) = b1
-
-        dt=5e-3      # time step
-        tFinal = 7.5   # final time
-        plot_dump=10 # interval for plots
-
-    elseif strcmp(choice,'bubbleSplit')
-
-        #
-        # USE SQUARE: Lx = Ly, Nx = Ny
-        #
-
-        # radius of bubble (centered in middle of domain, given in terms of mesh widths)
-        radius = 0.25*(NX/2)^2;
-
-        vort = 0.5*rand(NX,NY)-0.25
-        a=repmat(-NX/4+1:NX/4,[NY/2 1])
-        b1 = ( (a-1).^2 +  (a+1)'.^2 ) < radius
-        b1 = double(b1)
-        [r1,c1]=find(b1==1)
-        b1 = 0.5*rand(NX/2,NY/2)-0.25
-        for i=1:length(r1)
-            if c1(i) < NX/4
-                b1(r1(i),c1(i))=  0.10*(rand(1)-1.0)
-            else
-                b1(r1(i),c1(i))=  0.10*(rand(1)+0.90)
-            end
-        end
-        vort(NX/4+1:3*NX/4,NY/4+1:3*NY/4) = b1
-
-        dt=5e-3      # time step
-        tFinal = 7.5 # final time
-        plot_dump=10 # interval for plots
-    '''
-
+   
+    ######### ENDS ALL EXAMPLE INITIALIZATIONS ##########
 
     # Finally transform initial vorticity state to frequency space using FFT
     vort_hat = fftpack.fft2(vort) 
@@ -501,7 +522,7 @@ def FFT_NS_Solver():
 
     #
     # Choose initial vorticity state
-    # Choices:  'half', 'qtrs', 'rand', 'bubble3' (to be implemented: 'bubble1', 'bubbleSplit', see MATLAB version)
+    # Choices:  'half', 'qtrs', 'rand', 'bubble1', 'bubbleSplit', 'bubble3'
     #
     choice='bubble3'
     vort_hat,dt,tFinal,plot_dump = please_Give_Initial_Vorticity_State(choice,NX,NY)
