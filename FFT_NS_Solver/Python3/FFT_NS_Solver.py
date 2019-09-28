@@ -79,7 +79,7 @@ def print_Simulation_Info(choice):
         print('_________________________________________________________________________\n\n')
 
 
-    elif ( choice == 'bubble2' ):
+    elif ( choice == 'bubble3' ):
 
         print('You are simulating three nested regions of Vorticity (CW,CCW,CW) in a bed of random vorticity values\n')
         print('Try changing the position of the nested vortices in the "please_Give_Initial_State" function\n')
@@ -137,26 +137,112 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         # USE RECTANGLE: Lx = 2Ly, Nx = 2Ny
         #
 
-        buff = 4 # the # of grid cells around each vortex region (make sure even)
-        vort=np.zeros([NX,NY])
-        vort[0+buff:int(NX/2)-int(buff/2),0+buff:-buff]=1
-        vort[int(NX/2)+0+int(buff/2):-buff,0+buff:-buff]=1
+        # radii of vortex regions (given in terms of mesh widths)
+        radius1 = 0.3*NY
+        radius2 = 0.15*NY
+        
+        # repmat(a, m, n) is np.tile(a, (m, n)).
+        # np.tile(M,(m,n))
+        #a1=repmat(-(NX-1)/2:(NX-1)/2,[NY,1]);  (MATLAB)
+        #a2=repmat(-(NY-1)/2:(NY-1)/2,[NX,1]);  (MATLAB)
+
+        # auxillary vectors 
+        xAux = np.arange(-(NX-1)/2, (NX-1)/2+1, 1)
+        yAux = np.arange(-(NY-1)/2, (NY-1)/2+1, 1)
+        
+        # stack vectors to create grids of indices
+        a1=np.tile(xAux,(NY,1))
+        a2=np.tile(yAux,(NX,1))          
+
+        # Amount to translate cylinder from middle of domain
+        aR = np.floor(0.25*NX)    
+
+        # Form circular regions of vorticity
+        b1 = ( (a1+aR)**2+((a2).T)**2) < radius1**2
+        b2 = ( (a1-aR)**2+((a2).T)**2) < radius2**2 
+
+        # Convert to 0,1 boolean matrix from False,True matrix
+        b1 = b1.astype(int)
+        b2 = b2.astype(int)
+
+        # Convert boolean matrix to matrix of double values
+        # Note: here assuming no overlapping vorticity regions
+        b1 = np.double(b1) + np.double(b2)
+
+        # Find values where vorticity is
+        [r1,c1]=np.nonzero(b1)
+    
+        vort = np.zeros((NX,NY))
+        for i in range(0,r1.size):
+            if c1[i] >= NX/2:
+                vort[c1[i],r1[i]]= -0.05
+            else:
+                vort[c1[i],r1[i]]= -0.1 
+
         dt=1e-2        # time step
         tFinal = 5     # final time
         plot_dump=20   # interval for plots
 
     elif ( choice == 'qtrs' ):
 
+
         #
         # USE SQUARE: Lx = Ly, Nx = Ny
         #
+    
+        # radii of vortex regions (given in terms of mesh widths)
+        radius11 = 0.2*NY
+        radius12 = 0.2*NY
+        radius21 = 0.2*NY
+        radius22 = 0.2*NY
 
-        vort = -0.25*np.ones([NX,NY])
-        vort[1:int(NX/2)-1,1:int(NY/2)-1]=0.25
-        vort[int(NX/2):,int(NY/2):]=0.25
-        dt=1e-2      # time step
-        tFinal=5   # final time
-        plot_dump=20  # interval for plots'
+        # auxillary vectors 
+        xAux = np.arange(-(NX-1)/2, (NX-1)/2+1, 1)
+        yAux = np.arange(-(NY-1)/2, (NY-1)/2+1, 1)
+
+        # stack vectors to create grids of indices
+        a1=np.tile(xAux,(NY,1))
+        a2=np.tile(yAux,(NX,1))          
+
+        # Amount to translate cylinder from middle of domain
+        aR = np.floor(0.25*NX)  
+        aU = np.floor(0.25*NY)      
+
+        # Form circular regions of vorticity
+        b1 = ( (a1+aR)**2+((a2+aU).T)**2) < radius11**2
+        b2 = ( (a1-aR)**2+((a2-aU).T)**2) < radius12**2 
+        b3 = ( (a1+aR)**2+((a2-aU).T)**2) < radius21**2
+        b4 = ( (a1-aR)**2+((a2+aU).T)**2) < radius22**2 
+
+        # Convert to 0,1 boolean matrix from False,True matrix
+        b1 = b1.astype(int)
+        b2 = b2.astype(int)
+        b3 = b3.astype(int)
+        b4 = b4.astype(int)
+
+        # Convert boolean matrix of 0,1's to matrix of double values
+        b1 = np.double(b1) + np.double(b2) + np.double(b3) + np.double(b4)
+
+        # Find values where vorticity is
+        [r1,c1]=np.nonzero(b1)
+    
+        vort = np.zeros((NX,NY))
+        for i in range(0,r1.size):
+            if c1[i] >= NX/2:
+                if r1[i]>=NY/2:
+                    vort[c1[i],r1[i]]= 0.1
+                else:
+                    vort[c1[i],r1[i]]= -0.1
+            else:
+                if r1[i]>=NY/2:
+                    vort[c1[i],r1[i]]= 0.1
+                else:
+                    vort[c1[i],r1[i]]= -0.1 
+
+        dt=1e-2        # time step
+        tFinal = 5     # final time
+        plot_dump=20   # interval for plots
+
 
     elif ( choice == 'rand' ):
 
@@ -169,6 +255,61 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         tFinal = 1000 # final time
         plot_dump=25  # interval for plots
     
+    elif ( choice == 'bubble3' ):
+
+        #
+        # USE RECTANGLE: Lx = Ly, Nx = Ny
+        #
+
+        # radii of vortex regions (given in terms of mesh widths)
+        radius1 = 0.25*NX
+        radius2 = 0.175*NX
+        radius3 = 0.10*NX
+
+        # auxillary vectors 
+        xAux = np.arange(-(NX-1)/2, (NX-1)/2+1, 1)
+        yAux = np.arange(-(NY-1)/2, (NY-1)/2+1, 1)
+
+        # stack vectors to create grids of indices
+        a1=np.tile(xAux,(NY,1))
+        a2=np.tile(yAux,(NX,1))          
+
+        # Amount to translate cylinder from middle of domain
+        aD = np.floor(0.10*NX)    
+        aR = np.floor(0.15*NX)    
+
+        # Form circular regions of vorticity
+        b1 = ( (a1)**2+((a2).T)**2) < radius1**2         # region at center of domain
+        b2 = ( (a1)**2+((a2-aD).T)**2) < radius2**2      # shift 2nd region down from center
+        b3 = ( (a1+aR)**2+((a2-2*aD).T)**2) < radius3**2 # shift 3rd region down from center
+
+        # Convert to 0,1 boolean matrix from False,True matrix
+        b1 = b1.astype(int)
+        b2 = b2.astype(int)
+        b3 = b3.astype(int)
+
+        # Initialize vorticity in grid to random values between -1,1
+        vort = 2*np.random.rand(NX,NY)-1
+
+        # Find values where largest region is
+        [r1,c1]=np.nonzero(b1)
+        for i in range(0,r1.size):
+            vort[c1[i],r1[i]] = 0.4
+
+        # Find values where 2ND largest region is
+        [r2,c2]=np.nonzero(b2)
+        for i in range(0,r2.size):
+            vort[c2[i],r2[i]] = -0.5        
+
+        # Find values where 3RD largest region is (smallest)
+        [r3,c3]=np.nonzero(b3)
+        for i in range(0,r3.size):
+            vort[c3[i],r3[i]] = 0.5           
+
+        dt = 1e-2       # time step
+        tFinal = 30     # final time
+        plot_dump= 50   # interval for plots
+
     # WILL WORK ON OTHER EXAMPLES ONCE CODE IS UP AND RUNNING!
     '''
     elseif strcmp(choice,'bubble1')
@@ -222,67 +363,8 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         dt=5e-3      # time step
         tFinal = 7.5 # final time
         plot_dump=10 # interval for plots
+    '''
 
-    elseif strcmp(choice,'bubble2')
-
-        #
-        # USE SQUARE: Lx = Ly, Nx = Ny
-        #
-
-        # radius of bubble (centered in middle of domain, given in terms of mesh widths)
-        radius1 = 0.25*(NX/2)^2;
-        radius2 = 0.175*(NX/2)^2;
-        radius3 = 0.10*(NX/2)^2;
-
-        #Initialize vort matrix
-        vort = 2*rand(NX,NY)-1
-
-        ex = 0; #Makes sure full bubbles
-        sL = 0; #shift left
-        a1=repmat(-NX/4+(1-ex):NX/4,[NY/2+ex 1])
-        b1 = ( (a1-1).^2 +  (a1+1)'.^2 ) < radius1 #NX*8+NX/1.5
-        b1 = double(b1)
-        nZ = find(b1)
-        b1(nZ) = 0.8 
-        [r1,c1]=find(b1==0)
-        for i=1:length(r1)
-            b1(r1(i),c1(i))=  2*rand(1)-1
-        end
-        vort(NX/4+(1-ex):3*NX/4,NY/4+(1-ex)-sL:3*NY/4-sL) = b1
-
-        ex = 0;  #Makes sure full bubbles
-        sL = 20; #shift left
-        a2=repmat(-NX/8+(1-ex):NX/8,[NY/4+ex 1])
-        b2 = ( (a2-1).^2 +  (a2+1)'.^2 ) < radius2 #2*NX+NX/0.75
-        b2 = double(b2)
-        nZ = find(b2)
-        b2(nZ) = -1.0 
-        [r2,c2]=find(b2==0)
-        for i=1:length(r2)
-            b2(r2(i),c2(i))=  1.0 
-        end
-        vort(3*NX/8+(1-ex):5*NX/8,3*NY/8+(1-ex)-sL:5*NY/8-sL) = b2
-
-
-        ex = 2; #Makes sure full bubbles
-        sR = 8; #shift right
-        sD = 25;#shift down        
-        a3=repmat(-NX/16+(1-ex):NX/16,[NY/8+ex 1])
-        b3 = ( (a3-1).^2 +  (a3+1)'.^2 ) < radius3 #NX/2
-        b3 = double(b3)
-        nZ=find(b3)
-        b3(nZ)= 1.0 
-        [r3,c3]=find(b3==0)
-        for j=1:length(r3)
-            b3(r3(j),c3(j)) =  -1.0 
-        end
-        vort(7*NX/16+(1-ex)-sD:9*NX/16-sD,7*NY/16+(1-ex)+sR:9*NY/16+sR) = b3
-
-        dt = 1e-2      # time step
-        tFinal = 30    # final time
-        plot_dump= 50  # interval for plots
-
-    end''' 
 
     # Finally transform initial vorticity state to frequency space using FFT
     vort_hat = fftpack.fft2(vort) 
@@ -412,16 +494,16 @@ def FFT_NS_Solver():
     # Simulation Parameters
     #
     nu=1.0e-3  # kinematic viscosity
-    NX = 512   # # of grid points in x
+    NX = 256   # # of grid points in x
     NY = 256   # # of grid points in y
-    LX = 1     # 'Length' of x-Domain
-    LY = 0.5   # 'Length' of y-Domain
+    LX = 1.0   # 'Length' of x-Domain
+    LY = 1.0   # 'Length' of y-Domain
 
     #
     # Choose initial vorticity state
-    # Choices:  'half', 'qtrs', 'rand' (to be implemented: 'bubble1', 'bubble2', 'bubbleSplit', see MATLAB version)
+    # Choices:  'half', 'qtrs', 'rand', 'bubble3' (to be implemented: 'bubble1', 'bubbleSplit', see MATLAB version)
     #
-    choice='half'
+    choice='bubble3'
     vort_hat,dt,tFinal,plot_dump = please_Give_Initial_Vorticity_State(choice,NX,NY)
 
     #
@@ -432,7 +514,7 @@ def FFT_NS_Solver():
 
     t=0.0                                                 # Initialize time to 0.0
     nTot = int(tFinal/dt)                                 # Total number of time-steps
-    print('Simulation Time(s): {0:6.6f}\n'.format(t))     # Print initial time
+    print('Simulation Time: {0:6.6f}\n'.format(t))        # Print initial time
     for n in range(0,nTot+1):                             # Enter Time-Stepping Loop!
 
         # Printing zero-th time-step
@@ -446,7 +528,8 @@ def FFT_NS_Solver():
             v  = fftpack.ifft2(-kMatx*psi_hat ).real        # Compute -x derivative of stream function ==> v = -psi_x
 
             # SAVING DATA TO VTK #
-            ctsave = 0
+            ctsave = 0  # total # of time-steps
+            pSave = 0   # time-step data counter
 
             # CREATE VTK DATA FOLDER 
             try:
@@ -490,12 +573,15 @@ def FFT_NS_Solver():
             ctsave = ctsave + 1
             if ( ctsave % plot_dump == 0 ):
 
+                # increment Print counter
+                pSave = pSave + 1
+
                 # Transform back to real space via Inverse-FFT
                 vort_real = fftpack.ifft2(vort_hat).real
 
                 # Save .vtk data!
                 # Note: switch order of u and v in this function bc of notation-> f(x,y) here rather than matrix convention of y(row,col) w/ y=row, x=col
-                print_vtk_files(ctsave,v,u,vort_real,LX,LY,NX,NY)
+                print_vtk_files(pSave,v,u,vort_real,LX,LY,NX,NY)
 
                 # Plot simulation time
                 print('Simulation Time(s): {0:6.6f}\n'.format(t))
