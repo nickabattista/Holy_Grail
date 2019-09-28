@@ -127,10 +127,10 @@ def please_Give_Me_BCs(choice):
         vRight=-bVel 
         vLeft=bVel
 
-        endTime = 12                 # Final Simulation Time(s)
-        dt = 0.01                    # Time-step
+        endTime = 24                 # Final Simulation Time(s)
+        dt = 0.001                   # Time-step
         nStep=np.floor(endTime/dt)   # Number of Time-Steps
-        printStep = 20               # Print every # of printStep frames (for MATPLOTLIB)
+        printStep = 10               # Print every # of printStep frames (for MATPLOTLIB)
 
 
     elif (choice=='twoSide_same'):
@@ -183,9 +183,10 @@ def please_Give_Me_BCs(choice):
         vRight=-bVel 
         vLeft=bVel
 
-        dt = 0.01      #Time-step
-        nStep=150      #Number of Time-Steps
-        printStep = 2  #Print every # of printStep frames
+        endTime = 24                 # Final Simulation Time(s)
+        dt = 0.001                   # Time-step
+        nStep=np.floor(endTime/dt)   # Number of Time-Steps
+        printStep = 10               # Print every # of printStep frames (for MATPLOTLIB)
 
 
     return uTop,uBot,vRight,vLeft,dt,nStep,printStep,bVel #,xStart,yStart
@@ -198,16 +199,16 @@ def please_Give_Me_BCs(choice):
 #
 ###########################################################################
 
-def print_Simulation_Info(choice,dt,dx,nu,bVel,Ly):
+def print_Simulation_Info(choice,dt,dx,nu,bVel,Lx,Ly):
 
     # PRINT STABILITY INFO #
-    print('\nNOTE: dt must be <= {0:6.6f} for aNy chance of STABILITY!\n'.format(0.25*dx*dx/nu))
+    print('\nNOTE: dt must be <= {0:6.6f} for any chance of STABILITY!\n'.format(0.25*dx*dx/nu))
     print('Your dt = {0:6.6f}\n\n'.format(dt))
 
     if (choice=='cavity_top'):
 
         print('You are simulating cavity flow\n')
-        print('The open cavity is on the left side\n')
+        print('The open cavity is on the TOP side\n')
         print('Try changing the viscosity or geometry\n\n')
 
     elif (choice=='whirlwind'):
@@ -243,7 +244,7 @@ def print_Simulation_Info(choice,dt,dx,nu,bVel,Ly):
         print('Simulation default: whirlwind\n')
 
     #Prints Re Number # 
-    print('\nYour Re is: {0:6.6f}\n\n'.format(Ly*bVel/nu))
+    print('\nYour Re is: {0:6.6f}\n\n'.format(Lx*bVel/nu))
     print('____________________________________________________________________________\n\n')
 
 
@@ -261,7 +262,7 @@ def give_Auxillary_Velocity_Fields(dt,dx,nu,Nx,Ny,u,v,uTemp,vTemp):
         i=ii-1
         for jj in range(2,Ny+2):
             j=jj-1
-            uTemp[i,j]=u[i,j]+dt*(-(0.25/dx)*((u[i+1,j]+u[i,j])**2-(u[i,j]+u[i-1,j])**2+(u[i,j+1]+u[i,j])*(v[i+1,j]+v[i,j])-(u[i,j]+u[i,j-1])*(v[i+1,j-1]+v[i,j-1]))+(nu/dx**2)*(u[i+1,j]+u[i-1,j]+u[i,j+1]+u[i,j-1]-4*u[i,j]))
+            uTemp[i,j]=u[i,j]+dt*(-(0.25/dx)*((u[i+1,j]+u[i,j])**2-(u[i,j]+u[i-1,j])**2+(u[i,j+1]+u[i,j])*(v[i+1,j]+v[i,j])-(u[i,j]+u[i,j-1])*(v[i+1,j-1]+v[i,j-1]))+(nu/dx**2)*(u[i+1,j]+u[i-1,j]+u[i,j+1]+u[i,j-1]-4*u[i,j]) )
 
     #Find Temporary v-Velocity Field
     for ii in range(2,Nx+2):
@@ -269,7 +270,7 @@ def give_Auxillary_Velocity_Fields(dt,dx,nu,Nx,Ny,u,v,uTemp,vTemp):
         for jj in range(2,Ny+1): 
             j=jj-1
             vTemp[i,j]=v[i,j]+dt*(-(0.25/dx)*((u[i,j+1]+u[i,j])*(v[i+1,j]+v[i,j])-(u[i-1,j+1]+u[i-1,j])*(v[i,j]+v[i-1,j])+(v[i,j+1]+v[i,j])**2-(v[i,j]+v[i,j-1])**2)+(nu/dx**2)*(v[i+1,j]+v[i-1,j]+v[i,j+1]+v[i,j-1]-4*v[i,j]))
-    
+
     return uTemp, vTemp
 
 
@@ -284,7 +285,7 @@ def solve_Elliptic_Pressure_Equation(dt,dx,Nx,Ny,maxIter,beta,c,uTemp,vTemp,p):
     iter = 1 
     err = 1 
     tol = 5e-6
-    pPrev = p
+    pPrev = p.copy()
     while ( (err > tol) and (iter < maxIter) ):    
         for ii in range(2,Nx+2): 
             i=ii-1
@@ -293,10 +294,11 @@ def solve_Elliptic_Pressure_Equation(dt,dx,Nx,Ny,maxIter,beta,c,uTemp,vTemp,p):
                 p[i,j]=beta*c[i,j]*(p[i+1,j]+p[i-1,j]+p[i,j+1]+p[i,j-1]-(dx/dt)*(uTemp[i,j]-uTemp[i-1,j]+vTemp[i,j]-vTemp[i,j-1]))+(1-beta)*p[i,j]
 
         err = np.max( abs( p - pPrev ) ) 
-        pPrev = p
+        pPrev = p.copy()
         iter = iter + 1
 
     return p
+
 
 
 
@@ -345,27 +347,22 @@ def Projection_Method():
     Nx = 128                      # Spatial Resolution in x
     Ny = 256                      # Spatial Resolution in y
     dx=Lx/Nx                      # Spatial Distance Definition in x (NOTE: keep dx = Lx/Nx = Ly/Ny = dy)
-    xGrid = np.arange(0,Lx+dx,dx) # xGrid
-    yGrid = np.arange(0,Ly+dx,dx) # yGrid
 
 
     #
     # SIMULATION PARAMETERS #
     #
-    mu = 1          # Fluid DYNAMIC viscosity (kg / m*s)
-    rho = 1000      # Fluid DENSITY (kg/m^3) 
+    mu = 1.0        # Fluid DYNAMIC viscosity (kg / m*s) 
+    #                (mu=1000.0,100.0,10.0,1.0 for Re=4,40,400,4000 respectively for Cavity Flow examples
+    #                (mu=0.25,1.0,2.5 for Re=4000,1000, and 400, respectively for Circular Flow examples)
+    rho = 1000.0    # Fluid DENSITY (kg/m^3) 
     nu=mu/rho       # Fluid KINEMATIC viscosity
     numPredCorr = 3 # Number of Predictor-Corrector Steps
     maxIter=200     # Maximum Iterations for SOR Method to solve Elliptic Pressure Equation
     beta=1.25       # Relaxation Parameter 
 
 
-    #
-    # Initialize all storage quantities #
-    #
-    u, v, p, uTemp, vTemp, uAvg, vAvg, vorticity, c = initialize_Storage(Nx,Ny)
-
-    
+   
     #
     # CHOOSE SIMULATION (gives chosen simulation parameters) #
     # Possible choices: 'cavity_top', 'whirlwind', 'twoSide_same', 'twoSide_opp', 'corner'
@@ -374,8 +371,16 @@ def Projection_Method():
     uTop,uBot,vRight,vLeft,dt,nStep,pStep,bVel = please_Give_Me_BCs(choice)
 
 
+    #
+    # Initialize all storage quantities #
+    #
+    u, v, p, uTemp, vTemp, uAvg, vAvg, vorticity, c = initialize_Storage(Nx,Ny)
+
+    
+
+
     #PRINT SIMULATION INFO #
-    print_Simulation_Info(choice,dt,dx,nu,bVel,Ly) 
+    print_Simulation_Info(choice,dt,dx,nu,bVel,Lx,Ly) 
 
 
     # SAVING DATA TO VTK #
@@ -404,10 +409,11 @@ def Projection_Method():
     for j in range(1,int(nStep)+1):
 
         #Enforce Boundary Conditions (Solve for "ghost velocities")
-        u[0:Nx,0]   = ( 2*uBot-u[0:Nx,1]  )  * np.tanh(2.5*t)
-        u[0:Nx,Ny+1]= ( 2*uTop-u[0:Nx,Ny] )  * np.tanh(2.5*t)
-        v[0,0:Ny]   = ( 2*vLeft-v[1,0:Ny] )  * np.tanh(2.5*t)
-        v[Nx+1,0:Ny]= ( 2*vRight-v[Nx,0:Ny] )* np.tanh(2.5*t)
+        u[0:Nx,0]   = ( 2*uBot-u[0:Nx,1]  )  * np.tanh(0.25*t)
+        u[0:Nx,Ny+1]= ( 2*uTop-u[0:Nx,Ny] )  * np.tanh(0.25*t)
+        v[0,0:Ny]   = ( 2*vLeft-v[1,0:Ny] )  * np.tanh(0.25*t)
+        v[Nx+1,0:Ny]= ( 2*vRight-v[Nx,0:Ny] )* np.tanh(0.25*t)
+
 
         #Start Predictor-Corrector Steps
         for k in range(1,numPredCorr+1):
@@ -420,18 +426,27 @@ def Projection_Method():
 
             # Velocity Correction
             u[1:Nx-1,1:Ny] = uTemp[1:Nx-1,1:Ny] - (dt/dx) * ( p[2:Nx,1:Ny] - p[1:Nx-1,1:Ny] )
+
             v[1:Nx,1:Ny-1] = vTemp[1:Nx,1:Ny-1] - (dt/dx) * ( p[1:Nx,2:Ny] - p[1:Nx,1:Ny-1] )
-        
-        #Update Simulation Time (not needed in algorithm)
+
+        #Update Simulation Time 
         t=t+dt
 
 
         # Save files info!
         ctsave = ctsave + 1
         if ( ctsave % print_dump == 0):
+
+            # increment data storage counter
             pCount = pCount + 1
+
+            # compute vorticity
             vorticity[0:Nx,0:Ny] = ( u[0:Nx,1:Ny+1] - u[0:Nx,0:Ny] - v[1:Nx+1,0:Ny] + v[0:Nx,0:Ny] ) / (2*dx) 
+
+            # call function to store data at this time-step
             print_vtk_files(pCount,u,v,p,vorticity,Lx,Ly,Nx,Ny)
+            
+            # print simulation time
             print('Simulation Time: {0:6.6f}\n'.format(t))
 
         #
