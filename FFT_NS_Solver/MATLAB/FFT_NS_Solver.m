@@ -34,17 +34,17 @@ print_FFT_NS_Info();
 %
 % Simulation Parameters
 %
-nu=1.0e-3;  % kinematic viscosity
+nu=1.0e-3;  % kinematic viscosity (density/dynamic viscosity)
 NX = 256;   % # of grid points in x 
-NY = 256;   % # of grid points in y   % 256 for half, 512 for qtrs
+NY = 256;   % # of grid points in y   
 LX = 1;     % 'Length' of x-Domain
-LY = 1;   % 'Length' of y-Domain    % 0.5 for half, 1 for qtrs
+LY = 1;     % 'Length' of y-Domain      
 
 %
 % Choose initial vorticity state
-% Choices:  'half', 'qtrs', 'rand' ,'bubble1', 'bubble2', 'bubbleSplit'
+% Choices:  'half', 'qtrs', 'rand', 'bubble3', 'bubbleSplit','bubble1'
 %
-choice='bubble2';
+choice='bubble3';
 [vort_hat,dt,tFinal,plot_dump] = please_Give_Initial_Vorticity_State(choice,NX,NY);
 
 %
@@ -180,6 +180,7 @@ if strcmp(choice,'half')
     b2 = ( (a1-aR).^2+(a2)'.^2) < radius2^2; 
 
     % Convert boolean matrix to matrix of double values
+    % Note assuming no overlapping vorticity regions here
     b1 = double(b1) + double(b2);
     
     % Find values where vorticity is
@@ -211,7 +212,7 @@ elseif strcmp(choice,'qtrs')
     radius21 = 0.2*NY;
     radius22 = 0.2*NY;    
     
-    %
+    % stack vectors to create grids of indices
     a1=repmat(-(NX-1)/2:(NX-1)/2,[NY,1]); 
     a2=repmat(-(NY-1)/2:(NY-1)/2,[NX,1]);    
     
@@ -316,7 +317,7 @@ elseif strcmp(choice,'bubbleSplit')
     tFinal = 7.5; % final time
     plot_dump=10; % interval for plots
     
-elseif strcmp(choice,'bubble2')
+elseif strcmp(choice,'bubble3')
     
     %
     % SQUARE: Lx = Ly, Nx = Ny
@@ -336,71 +337,30 @@ elseif strcmp(choice,'bubble2')
     aR = floor(0.15*NX); 
 
     % Form circular regions of vorticity
-    b1 = ( (a1).^2+(a2)'.^2) < radius1^2;         % vortex at center of domain
-    b2 = ( (a1).^2+(a2-aD)'.^2) < radius2^2;      % shift 2nd vortex down from center
-    b3 = ( (a1+aR).^2+(a2-2*aD)'.^2) < radius3^2; % shift 3rd vortex down/right from center
+    b1 = ( (a1).^2+(a2)'.^2) < radius1^2;         % region at center of domain
+    b2 = ( (a1).^2+(a2-aD)'.^2) < radius2^2;      % shift 2nd region down from center
+    b3 = ( (a1+aR).^2+(a2-2*aD)'.^2) < radius3^2; % shift 3rd region down/right from center
     
-    %Initialize vort matrix
+    % Initialize vorticity in grid to random values between -1,1
     vort = 2*rand(NX,NY)-1;
 
-    % Find values where Largest Vortex is
+    % Find values where largest region is
     [r1,c1]=find(b1==1);
     for i=1:length(r1)
         vort(c1(i),r1(i))=  0.4;
     end
     
-    % Find values where 2nd Largest Vortex is
+    % Find values where 2ND largest region is
     [r1,c1]=find(b2==1);
     for i=1:length(r1)
         vort(c1(i),r1(i))=  -0.5;
     end
     
-    % Find values where 3rd Largest Vortex is (smallest)
+    % Find values where 3RD largest region is (smallest)
     [r1,c1]=find(b3==1);
     for i=1:length(r1)
         vort(c1(i),r1(i))=  0.5;
     end
-    
-    
-%     ex = 0; %Makes sure full bubbles
-%     sL = 0; %shift left
-%     a1=repmat(-NX/4+(1-ex):NX/4,[NY/2+ex 1]);
-%     b1 = ( (a1-1).^2 +  (a1+1)'.^2 ) < radius1^2;%8*NX+ 2/3*NX;
-%     b1 = double(b1);
-%     nZ = find(b1);
-%     b1(nZ) = 0.8; 
-%     [r1,c1]=find(b1==0);
-%     for i=1:length(r1)
-%         b1(r1(i),c1(i))=  2*rand(1)-1;
-%     end
-%     vort(NX/4+(1-ex):3*NX/4,NY/4+(1-ex)-sL:3*NY/4-sL) = b1;
-% 
-%     ex = 0;  %Makes sure full bubbles
-%     sL = 20; %shift left
-%     a2=repmat(-NX/8+(1-ex):NX/8,[NY/4+ex 1]);
-%     b2 = ( (a2-1).^2 +  (a2+1)'.^2 ) < radius2^2; %2*NX+NX/0.75;
-%     b2 = double(b2);
-%     nZ = find(b2);
-%     b2(nZ) = -1.0; 
-%     [r2,c2]=find(b2==0);
-%     for i=1:length(r2)
-%         b2(r2(i),c2(i))=  1.0; 
-%     end
-%     vort(3*NX/8+(1-ex):5*NX/8,3*NY/8+(1-ex)-sL:5*NY/8-sL) = b2;
-%    
-%     ex = 2; %Makes sure full bubbles
-%     sR = 8; %shift right
-%     sD = 25;%shift down
-%     a3=repmat(-NX/16+(1-ex):NX/16,[NY/8+ex 1]);
-%     b3 = ( (a3-1).^2 +  (a3+1)'.^2 ) < radius3^2;%NX/2;
-%     b3 = double(b3);
-%     nZ=find(b3);
-%     b3(nZ)= 1.0; 
-%     [r3,c3]=find(b3==0);
-%     for j=1:length(r3)
-%         b3(r3(j),c3(j)) =  -1.0; 
-%     end
-%     vort(7*NX/16+(1-ex)-sD:9*NX/16-sD,7*NY/16+(1-ex)+sR:9*NY/16+sR) = b3;
     
     dt = 1e-2;      % time step
     tFinal = 30;    % final time
