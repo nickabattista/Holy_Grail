@@ -11,7 +11,6 @@ function print_vtk_files(ctsave,U,V,P,vorticity,Lx,Ly,nx,ny)
 dx = Lx/(nx-1); 
 dy = Ly/(ny-1);
 
-
 %Go into viz_IB2d directory
 cd('vtk_data');
 

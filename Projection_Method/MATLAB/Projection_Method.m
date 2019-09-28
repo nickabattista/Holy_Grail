@@ -65,8 +65,6 @@ choice = 'cavity_top';
 
 
 
-
-
 %
 % Returns Boundary Conditions (BCs) and Other Simulation Parameters for
 % specific choice above
@@ -76,7 +74,6 @@ choice = 'cavity_top';
 
 %PRINT SIMULATION INFO %
 print_Simulation_Info(choice,dt,dx,nu,bVel,Lx,Ly); 
-
 
 
 % SAVING INITIAL DATA TO VTK %
@@ -98,26 +95,28 @@ for j=1:nStep
     % Enforce Boundary Conditions (Solve for "ghost velocities")
     %        Note: tanh() used to ramp up flow appropriately
     %
-    u(1:Nx+1,1)= (2*uBot-u(1:Nx+1,2) )*tanh(0.25*t);
-    u(1:Nx+1,Ny+2)= (2*uTop-u(1:Nx+1,Ny+1) )*tanh(0.25*t);
-    v(1,1:Ny+1)= (2*vLeft-v(2,1:Ny+1))*tanh(0.25*t);
-    v(Nx+2,1:Ny+1)= (2*vRight-v(Nx+1,1:Ny+1) )*tanh(0.25*t);
+    u(1:Nx+1,1)=    (2*uBot-u(1:Nx+1,2) )     * tanh(0.25*t);
+    u(1:Nx+1,Ny+2)= (2*uTop-u(1:Nx+1,Ny+1) )  * tanh(0.25*t);
+    v(1,1:Ny+1)=    (2*vLeft-v(2,1:Ny+1))     * tanh(0.25*t);
+    v(Nx+2,1:Ny+1)= (2*vRight-v(Nx+1,1:Ny+1) )* tanh(0.25*t);
 
+    
     % Start Predictor-Corrector Steps
     for k=1:numPredCorr
     
         %Find auxillary (temporary) velocity fields for predictor step
         [uTemp, vTemp] = give_Auxillary_Velocity_Fields(dt,dx,nu,Nx,Ny,u,v,uTemp,vTemp);
-    
+        
         %Solve Elliptic Equation for Pressure via SOR scheme
         p = solve_Elliptic_Pressure_Equation(dt,dx,Nx,Ny,maxIter,beta,c,uTemp,vTemp,p);
-
+        
         % Velocity Correction
         u(2:Nx,2:Ny+1)=uTemp(2:Nx,2:Ny+1)-(dt/dx)*(p(3:Nx+1,2:Ny+1)-p(2:Nx,2:Ny+1));
         v(2:Nx+1,2:Ny)=vTemp(2:Nx+1,2:Ny)-(dt/dx)*(p(2:Nx+1,3:Ny+1)-p(2:Nx+1,2:Ny));
     end
     
-    %Update Simulation Time (not needed in algorithm)
+    
+    %Update Simulation Time 
     t=t+dt;
     
     %
@@ -133,13 +132,21 @@ for j=1:nStep
     % Save files info!
     ctsave = ctsave + 1;
     if mod(ctsave,print_dump) == 0
+        
+        % increment data storage counter
         pCount = pCount + 1;
+        
+        % compute vorticity
         vorticity(1:Nx+1,1:Ny+1)=(u(1:Nx+1,2:Ny+2)-u(1:Nx+1,1:Ny+1)-v(2:Nx+2,1:Ny+1)+v(1:Nx+1,1:Ny+1))/(2*dx); 
+        
+        % call function to store data at this time-step
         print_vtk_files(pCount,u,v,p,vorticity,Lx,Ly,Nx,Ny);
+        
+        % print simulation time
         fprintf('Simulation Time: %d\n',t);
     end
 
-end %ENDS TIME-STEPPING
+end %ENDS PROJECTION METHOD TIME-STEPPING
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -283,6 +290,7 @@ function [uTop,uBot,vRight,vLeft,dt,nStep,printStep,bVel,xStart,yStart] = please
 
 % Possible choices: 'cavity_top', 'whirlwind', 'twoSide_same', 'twoSide_opp', 'corner'
 
+
 if strcmp(choice,'cavity_top')
     
     bVel = 4.0;
@@ -296,7 +304,7 @@ if strcmp(choice,'cavity_top')
     % Streamlines Info (for MATLAB plotting) %
     xStart = [0.1 0.5 0.7];
     yStart = 0.5*ones(size(xStart));
-    
+        
 elseif strcmp(choice,'whirlwind')
     
     bVel = 1.0;
@@ -359,9 +367,10 @@ else
     bVel = 1.0;
     uTop=bVel;  uBot=-bVel; vRight=-bVel; vLeft=bVel;
     
-    dt = 0.01;      % Time-step
-    nStep=150;      % Number of Time-Steps
-    printStep = 2;  % Plot data (MATLAB) every # of printStep frames
+    endTime = 24;            % Final time in simulation
+    dt = 0.001;              % Time-step
+    nStep=floor(endTime/dt); % Number of Time-Steps
+    printStep = 10;          % Plot data (MATLAB) every # of printStep frames
     
     % Streamlines Info (for MATLAB plotting) %
     yStart = 0.10:0.15:0.40;
@@ -412,10 +421,10 @@ function print_Simulation_Info(choice,dt,dx,nu,bVel,Lx,Ly)
 fprintf('\nNOTE: dt must be <= %d for any chance of STABILITY!\n',0.25*dx^2/nu);
 fprintf('Your dt = %d\n\n',dt);
 
-if strcmp(choice,'cavity_left')
+if strcmp(choice,'cavity_top')
     
     fprintf('You are simulating cavity flow\n');
-    fprintf('The open cavity is on the left side\n');
+    fprintf('The open cavity is on the TOP side\n');
     fprintf('Try changing the viscosity or geometry\n\n');
     
 elseif strcmp(choice,'whirlwind')
