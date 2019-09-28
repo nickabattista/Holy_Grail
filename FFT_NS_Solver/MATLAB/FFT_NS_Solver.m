@@ -6,7 +6,7 @@ function FFT_NS_Solver()
 %
 % Author: Nicholas A. Battista
 % Created: Novermber 29, 2014
-% Modified: September 11, 2019
+% Modified: September 28, 2019
 % 
 % Equations of Motion:
 % D (Vorticity) /Dt = nu*Laplacian(Vorticity)  
@@ -168,11 +168,11 @@ if strcmp(choice,'half')
     radius1 = 0.3*NY;
     radius2 = 0.15*NY;
     
-    %
+    % stack vectors to create grids of indices
     a1=repmat(-(NX-1)/2:(NX-1)/2,[NY,1]); 
     a2=repmat(-(NY-1)/2:(NY-1)/2,[NX,1]);    
     
-    % Amount to translate cylinder from middle of domain
+    % Amount to translate region from middle of domain
     aR = floor(0.25*NX);    
 
     % Form circular regions of vorticity
@@ -216,7 +216,7 @@ elseif strcmp(choice,'qtrs')
     a1=repmat(-(NX-1)/2:(NX-1)/2,[NY,1]); 
     a2=repmat(-(NY-1)/2:(NY-1)/2,[NX,1]);    
     
-    % Amount to translate cylinder from middle of domain
+    % Amount to translate region from middle of domain
     aR = floor(0.25*NX); 
     aU = floor(0.25*NY);
 
@@ -272,22 +272,27 @@ elseif strcmp(choice,'bubble1')
     %
     
     % radius of bubble (centered in middle of domain, given in terms of mesh widths)
-    radius = 0.25*NX;
+    radius1 = 0.25*NX;
     
-    vort = 0.25*rand(NX,NY)-0.50;
-    a=repmat(-NX/4+1:NX/4,[NY/2 1]);
-    b1 = ( (a-1).^2 +  (a+1)'.^2 ) < radius^2; %1024
-    b1 = double(b1);
+    % stack vectors to create grids of indices
+    a1=repmat(-(NX-1)/2:(NX-1)/2,[NY,1]); 
+    a2=repmat(-(NY-1)/2:(NY-1)/2,[NX,1]);    
+
+    % Form circular regions of vorticity
+    b1 = ( (a1).^2+(a2)'.^2) < radius1^2;         % region at center of domain
+    
+    % Initialize vorticity in grid to random values between -1,1
+    vort = 2*rand(NX,NY)-1;
+
+    % Find values where largest region is
     [r1,c1]=find(b1==1);
-    b1 = 0.5*rand(NX/2,NY/2)-0.25;
     for i=1:length(r1)
-        b1(r1(i),c1(i))=  0.5*(rand(1)+1);
+        vort(c1(i),r1(i))=  0.6;
     end
-    vort(NX/4+1:3*NX/4,NY/4+1:3*NY/4) = b1;
     
-    dt=5e-3;      % time step
-    tFinal = 7.5; % final time
-    plot_dump=10; % interval for plots
+    dt = 1e-2;      % time step
+    tFinal = 30;    % final time
+    plot_dump= 50;  % interval for plots
     
 elseif strcmp(choice,'bubbleSplit')
 
@@ -296,26 +301,32 @@ elseif strcmp(choice,'bubbleSplit')
     %
     
     % radius of bubble (centered in middle of domain, given in terms of mesh widths)
-    radius = 0.25*(NX/2)^2;
+    radius1 = 0.25*NX;
     
-    vort = 0.5*rand(NX,NY)-0.25;
-    a=repmat(-NX/4+1:NX/4,[NY/2 1]);
-    b1 = ( (a-1).^2 +  (a+1)'.^2 ) < radius;
-    b1 = double(b1);
+    % stack vectors to create grids of indices
+    a1=repmat(-(NX-1)/2:(NX-1)/2,[NY,1]); 
+    a2=repmat(-(NY-1)/2:(NY-1)/2,[NX,1]);    
+
+    % Form circular regions of vorticity
+    b1 = ( (a1).^2+(a2)'.^2) < radius1^2;         % region at center of domain
+    
+    % Initialize vorticity in grid to random values between -1,1
+    vort = 2*rand(NX,NY)-1;
+
+    % Find values where largest region is
     [r1,c1]=find(b1==1);
-    b1 = 0.5*rand(NX/2,NY/2)-0.25;
     for i=1:length(r1)
-        if c1(i) < NX/4
-            b1(r1(i),c1(i))=  0.10*(rand(1)-1.0);
+        if c1(i) < NX/2
+            vort(c1(i),r1(i))=  -0.5*rand(1);
         else
-            b1(r1(i),c1(i))=  0.10*(rand(1)+0.90);
+            vort(c1(i),r1(i))=  0.5*rand(1);
         end
     end
-    vort(NX/4+1:3*NX/4,NY/4+1:3*NY/4) = b1;
     
-    dt=5e-3;      % time step
-    tFinal = 7.5; % final time
-    plot_dump=10; % interval for plots
+    dt = 1e-2;      % time step
+    tFinal = 30;    % final time
+    plot_dump= 50;  % interval for plots
+    
     
 elseif strcmp(choice,'bubble3')
     
@@ -328,11 +339,11 @@ elseif strcmp(choice,'bubble3')
     radius2 = 0.175*NX;
     radius3 = 0.10*NX;
     
-    %
+    % stack vectors to create grids of indices
     a1=repmat(-(NX-1)/2:(NX-1)/2,[NY,1]); 
     a2=repmat(-(NY-1)/2:(NY-1)/2,[NX,1]);    
     
-    % Amount to translate cylinder from middle of domain
+    % Amount to translate region from middle of domain
     aD = floor(0.10*NX); 
     aR = floor(0.15*NX); 
 
@@ -537,7 +548,7 @@ if strcmp(choice,'bubble1')
     fprintf('_________________________________________________________________________\n\n');
 
     
-elseif strcmp(choice,'bubble2')
+elseif strcmp(choice,'bubble3')
     
     fprintf('You are simulating three nested regions of Vorticity (CW,CCW,CW) in a bed of random vorticity values\n');
     fprintf('Try changing the position of the nested vortices in the "please_Give_Initial_State" function\n');
