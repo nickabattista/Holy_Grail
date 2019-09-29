@@ -35,12 +35,23 @@ print_LBM_Info();
 %
 % Simulation Parameters
 %
-tau=0.53;                    % tau: relaxation parameter related to viscosity
-density=0.01;                % density to be used for initializing whole grid to value 1.0
+tau=0.53;                     % tau: relaxation parameter related to viscosity
+density=0.01;                 % density to be used for initializing whole grid 
 w1=4/9; w2=1/9; w3=1/36;      % weights for finding equilibrium distribution
 Nx=640; Ny=160;               % number of grid cells in x and y directions, respectively
 Lx = 2; Ly = 0.5;             % Size of computational domain
 dx = Lx/Nx; dy = Ly/Ny;       % Grid Resolution in x and y directions, respectively
+
+%
+% Chooses which problem to simulate
+%
+% Possible Choices: 'cylinder1', 'cylinder2', 'porousCylinder'
+%
+choice = 'cylinder2';
+percentPorosity = 0.625;        % Void fraction (if no porosity, no effect)
+[BOUND,Bound2,deltaU,endTime] = give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity); 
+                                %BOUND: gives geometry, deltaU: incremental increase to inlet velocity
+print_simulation_info(choice);
 
 
 %
@@ -52,15 +63,7 @@ grid_size=Nx*Ny;              % Total number of grid cells
 CI= 0:grid_size:7*grid_size;  % Indices to point to FIRST entry of the desired "z-stack" distribution grid      
 
 
-%
-% Chooses which problem to simulate
-%
-% Possible Choices: 'cylinder1', 'cylinder2', 'channel', 'porous1','porous2','porousCylinder'
-%
-choice = 'porousCylinder';
-percentPorosity = 0.625;  % Percent of Domain that's Porous (does not matter if not studying porous problem)
-[BOUND,Bound2,deltaU,endTime] = give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity); %BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
-print_simulation_info(choice);
+
 
 
 
@@ -81,10 +84,13 @@ REFLECTED= [ON+CI(3) ON+CI(4) ON+CI(1) ON+CI(2) ON+CI(7) ON+CI(8) ON+CI(5) ON+CI
 ts=0;                             %initialize starting time to 0 (time-step)
 fprintf('Simulation Time: %d\n',ts);
 
+
 % SAVING DATA TO VTK %
-print_dump = 400;%floor(endTime/50);
+print_dump = 100;%floor(endTime/50);
 ctsave = 0; % Counts # of total time-steps
 pSave = 0;  % Counts # of time-steps with data saved
+
+
 
 % CREATE VIZ_IB2D FOLDER and VISIT FILES
 mkdir('vtk_data');
@@ -245,9 +251,7 @@ elseif strcmp(choice,'cylinder2')
     % Simulation characteristics
     deltaU = 0.01;                                    % Incremental increase to inlet velocity
     endTime = 5500;                                   % Total Number of Time-Steps
-
-    size(BOUND)
-    pause();
+    
     
 elseif strcmp(choice,'channel')
     
@@ -287,7 +291,7 @@ elseif strcmp(choice,'porous2')
 elseif strcmp(choice,'porousCylinder')
 
     %
-    % FLOW PAST CYLINDER EXAMPLE
+    % FLOW PAST POROUS CYLINDER EXAMPLE
     % 
     % WORKS WELL: <faster, less accurate> [Nx,Ny]=[128,512], tau=0.53, density = 0.01, endTime = 5500
     %             <slower, more accurate> [Nx,Ny]=[256,1024],tau=0.55, density = 0.01
@@ -343,7 +347,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function f = please_Stream_Distribution(f,Nx,Ny)
-   
+
 
 f(:,:,1)=f([Nx 1:Nx-1],:,1);          %Stream Right
 
