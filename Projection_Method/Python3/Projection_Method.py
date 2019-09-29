@@ -22,7 +22,7 @@
           obtain a velocity field that satisfies momentum and
           incompressiblity.
           
-  '''
+'''
 
 import numpy as np
 from scipy import misc, fftpack
@@ -312,7 +312,6 @@ def solve_Elliptic_Pressure_Equation(dt,dx,Nx,Ny,maxIter,beta,c,uTemp,vTemp,p):
                 p[i,j]=beta*c[i,j]*(p[i+1,j]+p[i-1,j]+p[i,j+1]+p[i,j-1]-(dx/dt)*(uTemp[i,j]-uTemp[i-1,j]+vTemp[i,j]-vTemp[i,j-1]))+(1-beta)*p[i,j]
 
         err = np.max( abs( p - pPrev ) ) 
-<<<<<<< HEAD
 
         pPrev = np.array(p)
 
@@ -321,16 +320,7 @@ def solve_Elliptic_Pressure_Equation(dt,dx,Nx,Ny,maxIter,beta,c,uTemp,vTemp,p):
     return p
 
 
-=======
 
-        pPrev = np.array(p)
-        print(err)
-        iter = iter + 1
-        
-    return p
-
-
->>>>>>> 6224f1505839080c1d8f58607a42b6c34c3735bd
 ###########################################################################
 #
 # Function that performs the PROJECTION METHOD SIMULATION!
@@ -440,11 +430,6 @@ def Projection_Method():
         u[0:Nx+1,Ny+1]= ( 2*uTop-u[0:Nx+1,Ny] )  * np.tanh(0.25*t)
         v[0,0:Ny+1]   = ( 2*vLeft-v[1,0:Ny+1] )  * np.tanh(0.25*t)
         v[Nx+1,0:Ny+1]= ( 2*vRight-v[Nx,0:Ny+1] )* np.tanh(0.25*t)
-<<<<<<< HEAD
-=======
-
-        print(ctsave)
->>>>>>> 6224f1505839080c1d8f58607a42b6c34c3735bd
 
         #Start Predictor-Corrector Steps
         for k in range(1,numPredCorr+1):
