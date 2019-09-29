@@ -262,6 +262,51 @@ def give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity):
         endTime = 5500                    # Total Number of Time-Steps
 
 
+    elif (choice=='porousCylinder'):
+
+        #CHANNEL FLOW AROUND POROUS CYLINDER
+
+        # radii of cylinder (given in terms of mesh widths)
+        radius1 = 0.075*Ny
+
+        # auxillary vectors 
+        xAux = np.arange(-(Nx-1)/2, (Nx-1)/2+1, 1)
+        yAux = np.arange(-(Ny-1)/2, (Ny-1)/2+1, 1)
+
+        # stack vectors to create grids of indices
+        a1=np.tile(xAux,(Ny,1))
+        a2=np.tile(yAux,(Nx,1))          
+
+        # Amount to translate cylinder from middle of domain
+        aR = np.floor(0.375*Nx)    
+
+        # Create Cylinder Geometry (Note: "+" shifts left bc of defining circles)
+        BOUNDs= ( (a1+aR)**2+((a2).T)**2) < radius1**2     # Puts "1's" within Cylinder Region
+
+        # Convert to DOUBLE matrix from False,True matrix
+        BOUNDs = np.double(BOUNDs) 
+
+        # Find non-zero indices, e.g., where cylinder is
+        ind1,ind2 = np.nonzero(BOUNDs)
+
+        # Replace 1's with Random Value from [0,1]
+        for i in range(0,len(ind1)):
+            BOUNDs[ind1[i],ind2[i]] = np.random.rand()
+
+        # Make Porosity Statement
+        BOUNDs = (BOUNDs>percentPorosity) # PUTS "1's" inside domain randomly if RAND value above percent
+
+        # Convert to 0,1 boolean matrix from False,True matrix
+        BOUNDs = BOUNDs.astype(int)
+
+        # Create Top/Bottom Boundaries
+        BOUNDs[[0,Ny-1],0:] = 1              # Puts "1's" on Top/Bottom Boundaries
+
+        deltaU = 0.00125                     # Incremental increase to inlet velocity
+        endTime = 56000                      # Total Number of Time-Steps
+
+    
+
     #
     # Reverse Order of BOUND for GEOMETRY (top is initialized as bottom and vice versa)
     #
@@ -431,7 +476,7 @@ def lets_do_LBM():
     #
     # Chooses which problem to simulate
     #
-    # Possible Choices: 'cylinder1', 'cylinder2', 'porousCylinder
+    # Possible Choices: 'cylinder1', 'cylinder2', 'porousCylinder'
     #
     choice = 'cylinder2'
     percentPorosity = 0.625  # Percent of Domain that's Porous (does not matter if not studying porous problem)
