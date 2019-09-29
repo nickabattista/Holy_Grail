@@ -105,10 +105,10 @@ def initialize_Storage(Nx,Ny):
 
     #Coefficients when solving the Elliptic Pressure Equation w/ SOR (so averaging is consistent)
     c=1/4*np.ones((Nx+2,Ny+2))  # Interior node coefficients set to 1/4 (all elements exist)
-    c[1,2:Ny-1]=1/3             # Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
-    c[Nx,2:Ny-1]=1/3            # Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
-    c[2:Nx-1,1]=1/3             # Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
-    c[2:Nx-1,Ny]=1/3            # Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
+    c[1,2:Ny]=1/3             # Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
+    c[Nx,2:Ny]=1/3            # Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
+    c[2:Nx,1]=1/3             # Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
+    c[2:Nx,Ny]=1/3            # Boundary nodes coefficients set to 1/3 (1 element is zero -> nonexistent)
     c[1,1]=1/2                  # Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
     c[1,Ny]=1/2                 # Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
     c[Nx,1]=1/2                 # Corner nodes coefficient set to 1/2 (2 elements are zero -> nonexistent in computation)
@@ -425,10 +425,10 @@ def Projection_Method():
     for j in range(1,int(nStep)+1):
 
         #Enforce Boundary Conditions (Solve for "ghost velocities")
-        u[0:Nx,0]   = ( 2*uBot-u[0:Nx,1]  )  * np.tanh(0.25*t)
-        u[0:Nx,Ny+1]= ( 2*uTop-u[0:Nx,Ny] )  * np.tanh(0.25*t)
-        v[0,0:Ny]   = ( 2*vLeft-v[1,0:Ny] )  * np.tanh(0.25*t)
-        v[Nx+1,0:Ny]= ( 2*vRight-v[Nx,0:Ny] )* np.tanh(0.25*t)
+        u[0:Nx+1,0]   = ( 2*uBot-u[0:Nx+1,1]  )  * np.tanh(0.25*t)
+        u[0:Nx+1,Ny+1]= ( 2*uTop-u[0:Nx+1,Ny] )  * np.tanh(0.25*t)
+        v[0,0:Ny+1]   = ( 2*vLeft-v[1,0:Ny+1] )  * np.tanh(0.25*t)
+        v[Nx+1,0:Ny+1]= ( 2*vRight-v[Nx,0:Ny+1] )* np.tanh(0.25*t)
 
         print(ctsave)
 
@@ -442,8 +442,8 @@ def Projection_Method():
             p = solve_Elliptic_Pressure_Equation(dt,dx,Nx,Ny,maxIter,beta,c,uTemp,vTemp,p)
 
             # Velocity Correction
-            u[1:Nx-1,1:Ny] = uTemp[1:Nx-1,1:Ny] - (dt/dx) * ( p[2:Nx,1:Ny] - p[1:Nx-1,1:Ny] )
-            v[1:Nx,1:Ny-1] = vTemp[1:Nx,1:Ny-1] - (dt/dx) * ( p[1:Nx,2:Ny] - p[1:Nx,1:Ny-1] )
+            u[1:Nx,1:Ny+1] = uTemp[1:Nx,1:Ny+1] - (dt/dx) * ( p[2:Nx+1,1:Ny+1] - p[1:Nx,1:Ny+1] )
+            v[1:Nx+1,1:Ny] = vTemp[1:Nx+1,1:Ny] - (dt/dx) * ( p[1:Nx+1,2:Ny+1] - p[1:Nx+1,1:Ny] )
 
 
         #Update Simulation Time 
@@ -458,7 +458,7 @@ def Projection_Method():
             pCount = pCount + 1
 
             # compute vorticity
-            vorticity[0:Nx,0:Ny] = ( u[0:Nx,1:Ny+1] - u[0:Nx,0:Ny] - v[1:Nx+1,0:Ny] + v[0:Nx,0:Ny] ) / (2*dx) 
+            vorticity[0:Nx+1,0:Ny+1] = ( u[0:Nx+1,1:Ny+2] - u[0:Nx+1,0:Ny+1] - v[1:Nx+2,0:Ny+1] + v[0:Nx+1,0:Ny+1] ) / (2*dx) 
 
             # call function to store data at this time-step
             print_vtk_files(pCount,u,v,p,vorticity,Lx,Ly,Nx,Ny)
