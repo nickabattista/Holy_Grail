@@ -112,16 +112,19 @@ def print_simulation_info(choice):
 #
 ###########################################################################
     
-def give_Me_Boundary_Pts_For_Visualization(dx,dy,nx,ny,Lx,Ly,ON_i,ON_j):
+def give_Me_Boundary_Pts_For_Visualization(dx,dy,Nx,Ny,Lx,Ly,ON_i,ON_j):
 
     aX = np.arange(Lx-dx,-dx,-dx)
-    xMat = np.tile(aX,[nx,1]).T           # MATLAB: xMat = repmat(Lx-dx:-dx:0,nx).T
+    xMat = np.tile(aX,[Ny,1])           # MATLAB: xMat = repmat(Lx-dx:-dx:0,Nx).T
 
     aY = np.arange(0,Ly,dy)
-    yMat = np.tile(aY,[ny,1])             # MATLAB: yMat = repmat(0:dy:Ly,ny)
+    yMat = np.tile(aY,[Nx,1]).T         # MATLAB: yMat = repmat(0:dy:Ly,Ny)
+    
     xBounds = xMat[ON_i,ON_j]
     xBounds = -xBounds + Lx
     yBounds = yMat[ON_i,ON_j]
+
+
 
     lenX = len(xBounds)
     Bound_Pts = np.zeros((lenX,2))
@@ -148,81 +151,125 @@ def give_Me_Boundary_Pts_For_Visualization(dx,dy,nx,ny,Lx,Ly,ON_i,ON_j):
 #
 ##########################################################################
 
-def give_Me_Problem_Geometry(choice,nx,ny,percentPorosity):
+def give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity):
 
 
     if (choice=='channel'):
 
         #CHANNEL GEOMETRY
-        BOUNDs=np.zeros((nx,ny))
-        BOUNDs[0:,[0,ny-1]]=1.0            # PUTS "1's" on LEFT/RIGHT Boundaries
+        BOUNDs=np.zeros((Nx,Ny))
+        BOUNDs[0:,[0,Ny-1]]=1.0            # PUTS "1's" on LEFT/RIGHT Boundaries
         deltaU = 0.01                      # Incremental increase to inlet velocity
         endTime = 2500
 
     elif (choice=='porous1'):
 
         #POROUS RANDOM DOMAIN
-        BOUNDs=np.random.rand(nx,ny)<(1-percentPorosity)   # Puts TRUE/FALSE's inside domain randomly if RAND value above percent
+        BOUNDs=np.random.rand(Nx,Ny)<(1-percentPorosity)   # Puts TRUE/FALSE's inside domain randomly if RAND value above percent
         BOUNDs=BOUNDs.astype(int)                          # Converts Boolean matrix to matrix of 0,1's  
-        aS = int(np.ceil(nx/5))                            # Puts openings near ends of porous channel
-        aE = int(np.ceil(4*nx/5))                          # Puts openings near ends of porous channel
+        aS = int(np.ceil(Nx/5))                            # Puts openings near ends of porous channel
+        aE = int(np.ceil(4*Nx/5))                          # Puts openings near ends of porous channel
         BOUNDs[0:aS,:] = 0                                 # Puts openings near ends of porous channel
         BOUNDs[aE:,:]=0                                    # Puts openings near ends of porous channel
-        BOUNDs[0:,[0,ny-1]]=1                              # Puts "1's" on LEFT/RIGHT Boundaries
+        BOUNDs[0:,[0,Ny-1]]=1                              # Puts "1's" on LEFT/RIGHT Boundaries
         deltaU = 1e-7                                      # Incremental increase to inlet velocity
         endTime = 5000
 
     elif (choice=='porous2'):
 
         #POROUS RANDOM DOMAIN
-        BOUNDs=np.random.rand(nx,ny)<(1-percentPorosity)                 # PUTS "1's" inside domain randomly if RAND value above percent              
-        BOUNDs[np.arange(0,int(np.floor(9*nx/31)),1),:] = 0                        # PUTS "0's" to make open channels through porous structure
-        BOUNDs[np.arange(int(np.floor(7*nx/31)),int(np.ceil(9*nx/31)),1),:] = 0    # PUTS "0's" to make open channels through porous structure
-        BOUNDs[np.arange(int(np.floor(13*nx/31)),int(np.ceil(15*nx/31)),1),:] = 0  # PUTS "0's" to make open channels through porous structure
-        BOUNDs[np.arange(int(np.floor(19/31*nx)),int(np.ceil(21/31*nx)),1),:] = 0  # PUTS "0's" to make open channels through porous structure
-        BOUNDs[np.arange(int(np.floor(25/31*nx)),int(np.ceil(27/31*nx)),1),:]=0    # PUTS "0's" to make open channels through porous structure
-        BOUNDs[int(np.floor(30/31*nx)):,:] = 0                                     # PUTS "0's" to make open channels through porous structure
-        BOUNDs[0:,[0,ny-1]]= 1                                           # PUTS "1's" on LEFT/RIGHT Boundaries
+        BOUNDs=np.random.rand(Nx,Ny)<(1-percentPorosity)                 # PUTS "1's" inside domain randomly if RAND value above percent              
+        BOUNDs[np.arange(0,int(np.floor(9*Nx/31)),1),:] = 0                        # PUTS "0's" to make open channels through porous structure
+        BOUNDs[np.arange(int(np.floor(7*Nx/31)),int(np.ceil(9*Nx/31)),1),:] = 0    # PUTS "0's" to make open channels through porous structure
+        BOUNDs[np.arange(int(np.floor(13*Nx/31)),int(np.ceil(15*Nx/31)),1),:] = 0  # PUTS "0's" to make open channels through porous structure
+        BOUNDs[np.arange(int(np.floor(19/31*Nx)),int(np.ceil(21/31*Nx)),1),:] = 0  # PUTS "0's" to make open channels through porous structure
+        BOUNDs[np.arange(int(np.floor(25/31*Nx)),int(np.ceil(27/31*Nx)),1),:]=0    # PUTS "0's" to make open channels through porous structure
+        BOUNDs[int(np.floor(30/31*Nx)):,:] = 0                                     # PUTS "0's" to make open channels through porous structure
+        BOUNDs[0:,[0,Ny-1]]= 1                                           # PUTS "1's" on LEFT/RIGHT Boundaries
         deltaU = 1e-7                                                    # Incremental increase to inlet velocity
         endTime = 5000
     
 
-    
     elif (choice=='cylinder1'):
 
         #CHANNEL FLOW W/ CYLINDER
-        a0=np.arange(-(nx-1)/2,(nx-1)/2+1,1) 
-        a = np.tile(a0,(ny,1))               # MATLAB: a=repmat(-(nx-1)/2:(nx-1)/2,[ny,1]) 
-        r = np.floor(nx/3.5)
-        aR = np.ceil(nx/3.5)
-        BOUNDs= ( a*a + (a+aR).T**2 ) < r    # PUTS "1's" within region of Cylinder
-        BOUNDs[0:,[0,ny-1]]=1                # Puts "1's" on Left/Right Boundaries
-        BOUNDs=BOUNDs.astype(int)           # Convert boolean matrix to integer matrix
-        deltaU = 0.01                        # Incremental increase to inlet velocity
-        endTime = 2500
+
+        # radii of cylinder (given in terms of mesh widths)
+        radius1 = 0.075*Ny
+
+        # auxillary vectors 
+        xAux = np.arange(-(Nx-1)/2, (Nx-1)/2+1, 1)
+        yAux = np.arange(-(Ny-1)/2, (Ny-1)/2+1, 1)
+
+        # stack vectors to create grids of indices
+        a1=np.tile(xAux,(Ny,1))
+        a2=np.tile(yAux,(Nx,1))          
+
+        # Amount to translate cylinder from middle of domain
+        aR = np.floor(0.375*Nx)    
+
+        # Create Cylinder Geometry (Note: "+" shifts left bc of defining circles)
+        BOUNDs= ( (a1+aR)**2+((a2).T)**2) < radius1**2     # Puts "1's" within Cylinder Region
+
+        # Convert to 0,1 boolean matrix from False,True matrix
+        BOUNDs = BOUNDs.astype(int)
+
+        # Create Top/Bottom Boundaries
+        BOUNDs[[0,Ny-1],0:] = 1              # Puts "1's" on Top/Bottom Boundaries
+
+        deltaU = 0.00125                     # Incremental increase to inlet velocity
+        endTime = 56000                      # Total Number of Time-Steps
+
     
     elif (choice=='cylinder2'):
 
-        #CHANNEL FLOW W/ CYLINDER
-        a0=np.arange(-(nx-1)/2,(nx-1)/2+1,1) 
-        a = np.tile(a0,(ny,1))               # MATLAB: a=repmat(-(nx-1)/2:(nx-1)/2,[ny,1]) 
-        r = np.floor(nx/2.5)
-        aL = np.floor(nx/5)
-        aR = np.ceil(nx/2)
-        aM = 0.3*aR
-        B1=  ( ( (a)**2 + (a+3.75*aR/5).T**2)<r )           # PUTS "1's" within region of Cylinder1
-        B2=  ( ( (a+aL/1.75)**2 + (a+4*aM/5).T**2) <r )     # PUTS "1's" within region of Cylinder2
-        B3=  ( ( (a-aL/1.75)**2 + (a+4*aM/5).T**2) <r )     # PUTS "1's" within region of Cylinder1
-        BOUNDs= B1.astype(int) + B2.astype(int) + B3.astype(int)  # Convert boolean matrix to integer matrix
-        BOUNDs[0:,[0,ny-1]] = 1                             # Puts "1's" on Left/Right Boundaries
-        deltaU = 0.01                                       # Incremental increase to inlet velocity
-        endTime = 4000
+        #CHANNEL FLOW W/ MULTIPLE CYLINDERS
+        
+        # radii of cylinder (given in terms of mesh widths)
+        radius1 = 0.125*Ny
+
+        # auxillary vectors 
+        xAux = np.arange(-(Nx-1)/2, (Nx-1)/2+1, 1)
+        yAux = np.arange(-(Ny-1)/2, (Ny-1)/2+1, 1)
+
+        # stack vectors to create grids of indices
+        a1=np.tile(xAux,(Ny,1))
+        a2=np.tile(yAux,(Nx,1))          
+
+        # Amount to translate cylinder from middle of domain
+        aR = np.floor(0.375*Nx)    
+        aSx = np.floor(0.1*Nx)
+        aY = np.floor(0.2*Ny)
     
+        # Create Cylinder Geometry (Note: "+" shifts left bc of defining circles)
+        B1 = ( (a1+aR)**2+((a2).T)**2) < radius1**2            # Puts "1's" within Cylinder Region
+        B2 = ( (a1+aR-aSx)**2+((a2-aY).T)**2) < radius1**2     # Puts "1's" within Cylinder Region
+        B3 = ( (a1+aR-aSx)**2+((a2+aY).T)**2) < radius1**2     # Puts "1's" within Cylinder Region
+
+        # Convert to 0,1 boolean matrix from False,True matrix
+        B1 = B1.astype(int)
+        B2 = B2.astype(int)
+        B3 = B3.astype(int)
+
+        # Combine boolean matrices
+        # Note: here assuming no overlapping vorticity regions
+        BOUNDs = B1 + B2 + B3
+
+        # Create Top/Bottom Boundaries
+        BOUNDs[[0,Ny-1],0:] = 1              # Puts "1's" on Top/Bottom Boundaries
+
+        deltaU = 0.01                     # Incremental increase to inlet velocity
+        endTime = 5500                    # Total Number of Time-Steps
 
 
+    #
+    # Reverse Order of BOUND for GEOMETRY (top is initialized as bottom and vice versa)
+    #
+    Bound2 = np.zeros( BOUNDs.shape )
+    for i in range(0,Ny):
+        Bound2[i,0:] = BOUNDs[Ny-1-i,0:]
 
-
-    return BOUNDs, deltaU, endTime
+    return BOUNDs, Bound2, deltaU, endTime
 
 
 ##########################################################################
@@ -231,72 +278,74 @@ def give_Me_Problem_Geometry(choice,nx,ny,percentPorosity):
 #
 ##########################################################################
 
-def please_Stream_Distribution(f,nx,ny):
+def please_Stream_Distribution(f,Nx,Ny):
     
-    oInds = np.arange(0,ny,1)                # Indices Vector 0,1,...ny-1
+    xInds = np.arange(0,Nx,1)                # Indices Vector 0,1,...,Ny-1
+    yInds = np.arange(0,Ny,1)                # Indices Vector 0,1,...,Nx-1
+
 
     # STREAM RIGHT
-    a1=np.array([nx-1])
-    a2=np.arange(0,nx-1,1)
+    a1=np.array([Nx-1])
+    a2=np.arange(0,Nx-1,1)
     inds = np.concatenate((a1, a2), axis=0)
-    f[0,oInds,:] =f[0,inds,:]                 #Stream Right
+    f[0,xInds,:] =f[0,inds,:]                 #Stream Right
 
 
     # STREAM UP
-    a1=np.array([ny-1])
-    a2=np.arange(0,ny-1,1)
+    a1=np.array([Ny-1])
+    a2=np.arange(0,Ny-1,1)
     inds = np.concatenate((a1, a2), axis=0)
-    f[1,:,oInds] =f[1,:,inds]                 #Stream Up
+    f[1,:,yInds] =f[1,:,inds]                 #Stream Up
 
 
     # STREAM LEFT
     a1=np.array([0])
-    a2=np.arange(1,nx,1)
+    a2=np.arange(1,Nx,1)
     inds = np.concatenate((a2, a1), axis=0)
-    f[2,oInds,:] =f[2,inds,:]                #Stream Left
+    f[2,xInds,:] =f[2,inds,:]                #Stream Left
 
 
     # STREAM DOWN
     a1=np.array([0])
-    a2=np.arange(1,ny,1)
+    a2=np.arange(1,Ny,1)
     inds = np.concatenate((a2, a1), axis=0)
-    f[3,:,oInds] =f[3,:,inds]                #Stream Down
+    f[3,:,yInds] =f[3,:,inds]                #Stream Down
 
 
     # STREAM RIGHT-UP!
-    a1=np.array([nx-1]); a2=np.arange(0,nx-1,1)
+    a1=np.array([Nx-1]); a2=np.arange(0,Nx-1,1)
     inds = np.concatenate((a1, a2), axis=0)
-    b1=np.array([ny-1]); b2=np.arange(0,ny-1,1)
+    b1=np.array([Ny-1]); b2=np.arange(0,Ny-1,1)
     indsY = np.concatenate((b1, b2), axis=0)
-    f[4,oInds,:] =f[4,inds,:]            #Stream Right
-    f[4,:,oInds] =f[4,:,indsY]           #Stream Up
+    f[4,xInds,:] =f[4,inds,:]            #Stream Right
+    f[4,:,yInds] =f[4,:,indsY]           #Stream Up
 
 
     # STREAM LEFT-UP!
-    a1=np.array([0]); a2=np.arange(1,nx,1)
+    a1=np.array([0]); a2=np.arange(1,Nx,1)
     inds = np.concatenate((a2, a1), axis=0)
-    b1=np.array([ny-1]); b2=np.arange(0,ny-1,1)
+    b1=np.array([Ny-1]); b2=np.arange(0,Ny-1,1)
     indsY = np.concatenate((b1, b2), axis=0)
-    f[5,oInds,:] =f[5,inds,:]            #Stream Left
-    f[5,:,oInds] =f[5,:,indsY]           #Stream Up
+    f[5,xInds,:] =f[5,inds,:]            #Stream Left
+    f[5,:,yInds] =f[5,:,indsY]           #Stream Up
 
 
     # STREAM LEFT-DOWN
-    a1=np.array([0]); a2=np.arange(1,nx,1)
+    a1=np.array([0]); a2=np.arange(1,Nx,1)
     inds = np.concatenate((a2, a1), axis=0)
-    b1=np.array([0]); b2=np.arange(1,ny,1)
+    b1=np.array([0]); b2=np.arange(1,Ny,1)
     indsY = np.concatenate((b2, b1), axis=0)
-    f[6,oInds,:] =f[6,inds,:]            #Stream Left
-    f[6,:,oInds] =f[6,:,indsY]           #Stream Down
+    f[6,xInds,:] =f[6,inds,:]            #Stream Left
+    f[6,:,yInds] =f[6,:,indsY]           #Stream Down
 
 
     # STREAM RIGHT-DOWN
-    a1=np.array([nx-1]); a2=np.arange(0,nx-1,1)
+    a1=np.array([Nx-1]); a2=np.arange(0,Nx-1,1)
     inds = np.concatenate((a1, a2), axis=0)
-    b1=np.array([0]); b2=np.arange(1,ny,1)
+    b1=np.array([0]); b2=np.arange(1,Ny,1)
     indsY = np.concatenate((b2, b1), axis=0)
-    f[7,oInds,:] =f[7,inds,:]            #Stream Right
-    f[7,:,oInds] =f[7,:,indsY]           #Stream Down
+    f[7,xInds,:] =f[7,inds,:]            #Stream Right
+    f[7,:,yInds] =f[7,:,indsY]           #Stream Down
 
 
     return f
@@ -371,34 +420,42 @@ def lets_do_LBM():
     #
     # Simulation Parameters
     #
-    tau=0.55 #0.9 #0.53                           # Tau: relaxation parameter related to viscosity
+    tau=0.53                               # Tau: relaxation parameter related to viscosity
     density=0.01                           # Density to be used for initializing whole grid to value 1.0
     w1=4/9; w2=1/9; w3=1/36                # Weights for finding equilibrium distribution
-    nx=100; ny=100                         # Number of grid cells
-    Lx = 1; Ly = 1                         # Size of computational domain
-    dx = Lx/nx; dy = Ly/ny                 # Grid Resolutions in x and y directions, respectively
-    f = density/9.0*np.ones((9,nx,ny))     # Copies density/9 into 9-matrices of size [nx,ny] -> ALLOCATION for all "DIRECTIONS"
-    f_EQ = density/9.0*np.ones((9,nx,ny))  # Initializes F-equilibrium Storage space
-    grid_size= nx*ny                       # Total number of grid cells
-    CI= np.arange(0,8*grid_size,grid_size) # Indices to point to FIRST entry of the desired "z-stack" distribution grid      
+    Nx=640; Ny=160                         # Number of grid cells
+    Lx = 2; Ly = 0.5                       # Size of computational domain
+    dx = Lx/Nx; dy = Ly/Ny                 # Grid Resolutions in x and y directions, respectively
     
+
     #
     # Chooses which problem to simulate
     #
-    # Possible Choices: 'cylinder1', 'cylinder2', 'channel', 'porous1', 'porous2'
+    # Possible Choices: 'cylinder1', 'cylinder2', 'porousCylinder
     #
     choice = 'cylinder2'
-    percentPorosity = 0.75  # Percent of Domain that's Porous (does not matter if not studying porous problem)
-    BOUND, deltaU, endTime = give_Me_Problem_Geometry(choice,nx,ny,percentPorosity) #BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
+    percentPorosity = 0.625  # Percent of Domain that's Porous (does not matter if not studying porous problem)
+    BOUND, Bound2, deltaU, endTime = give_Me_Problem_Geometry(choice,Nx,Ny,percentPorosity) #BOUND: gives geometry, deltaU: gives incremental increase to inlet velocity
     print_simulation_info(choice)
 
 
+    #
+    # Gridding Initialization
+    #
+    f = density/9.0*np.ones((9,Nx,Ny))     # Copies density/9 into 9-matrices of size [Nx,Ny] -> ALLOCATION for all "DIRECTIONS"
+    f_EQ = density/9.0*np.ones((9,Nx,Ny))  # Initializes F-equilibrium Storage space
+    grid_size= Nx*Ny                       # Total number of grid cells
+    CI= np.arange(0,8*grid_size,grid_size) # Indices to point to FIRST entry of the desired "z-stack" distribution grid      
+    
+
+
     #Find Indices of NONZERO Elements, i.e., where "boundary points" are
-    ON_i,ON_j = np.nonzero(BOUND)     # matrix offset of each Occupied Node e.g., A(ON_i,ON_j) ~= 0
-    BOUNCEDBACK = np.zeros((ON_i.size,8))
+    ON_i,ON_j = np.nonzero(BOUND.T)       # matrix offset of each Occupied Node e.g., A(ON_i,ON_j) ~= 0
+    On2_i,On2_j = np.nonzero(Bound2)      # matrix index of each occupied node for visualization data
+    BOUNCEDBACK = np.zeros((ON_i.size,8)) 
 
     # Give Boundary Points For Saving Data
-    Bound_Pts = give_Me_Boundary_Pts_For_Visualization(dx,dy,nx,ny,Lx,Ly,ON_i,ON_j)
+    Bound_Pts = give_Me_Boundary_Pts_For_Visualization(dx,dy,Nx,Ny,Lx,Ly,On2_i,On2_j)
 
     #Initialization Parameters
     ts=0                              # initialize starting time to 0 (time-step)
@@ -406,8 +463,10 @@ def lets_do_LBM():
 
 
     # SAVING DATA TO VTK #
-    print_dump = int(np.floor(endTime/50))
-    ctsave = 0
+    print_dump = 100 #int(np.floor(endTime/50))  # number of time-steps between data storage
+    ctsave = 0                              # Counts # of total time-steps
+    pSave = 0                               # Counts total number of time-steps with data saved
+    
     # CREATE VTK DATA FOLDER
     try:
         os.mkdir('vtk_data')
@@ -416,10 +475,10 @@ def lets_do_LBM():
         pass
 
     # INITIALIZE DATA STORAGE #    
-    UX = np.zeros((nx,ny))                                          # Initialize x-Component of Velocity
-    UY = np.zeros((nx,ny))                                          # Initialize y-Component of Velocity
-    vorticity = np.zeros((nx-1,ny-1))                               # Initialize Vorticity   
-    print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny,Bound_Pts)   # Print .vtk files for initial configuration
+    UX = np.zeros((Nx,Ny))                                          # Initialize x-Component of Velocity
+    UY = np.zeros((Nx,Ny))                                          # Initialize y-Component of Velocity
+    vorticity = np.zeros((Nx-1,Ny-1))                               # Initialize Vorticity   
+    print_vtk_files(pSave,UX,UY,vorticity,Lx,Ly,Nx,Ny,Bound_Pts)   # Print .vtk files for initial configuration
 
 
     #Begin time-stepping!
@@ -427,7 +486,7 @@ def lets_do_LBM():
 
 
         # STREAMING STEP (progate in respective directions)
-        f = please_Stream_Distribution(f,nx,ny)
+        f = please_Stream_Distribution(f,Nx,Ny)
 
 
         #Densities bouncing back at next timestep
@@ -453,7 +512,7 @@ def lets_do_LBM():
         # MATLAB: UY=( sum(f(:,:,[2 5 6]),3)-sum(f(:,:,[4 7 8]),3) ) ./ DENSITY
 
         #Increase inlet velocity with each time step along left wall
-        UX[0,:] = UX[0,:] + deltaU 
+        UX[0,1:Ny] = UX[0,1:Ny] + deltaU 
 
 
         #Enforce BCs to Zero Velocity / Zero Density
@@ -505,16 +564,21 @@ def lets_do_LBM():
         ctsave = ctsave + 1
         if (ctsave % print_dump) == 0:
 
+            # increment pSave counter
+            pSave = pSave + 1
+
             # compute vorticity
-            dUx_y = ( UX[0:nx-2,1:ny-1] - UX[0:nx-2,0:ny-2] ) / dy
-            dUy_x = ( UY[1:nx-1,0:ny-2] - UY[0:nx-2,0:ny-2] ) / dx
-            vorticity[0:nx-2,0:ny-2] = dUy_x - dUx_y 
+            dUx_y = ( UX[0:Nx-1,1:Ny] - UX[0:Nx-1,0:Ny-1] ) / dy
+            dUy_x = ( UY[1:Nx,0:Ny-1] - UY[0:Nx-1,0:Ny-1] ) / dx
+            vorticity[0:Nx-1,0:Ny-1] = dUy_x - dUx_y 
 
             # print to vtk
-            print_vtk_files(ctsave,UX,UY,vorticity,Lx,Ly,nx,ny,Bound_Pts)
+            print_vtk_files(pSave,UX,UY,vorticity,Lx,Ly,Nx,Ny,Bound_Pts)
             print('Simulation Time: {0:6.6f}\n'.format(ts))
         
+
 #### ENDS MAIN TIME-STEPPING ROUTINE #####
+
 
 if __name__ == "__main__":
     lets_do_LBM()    
