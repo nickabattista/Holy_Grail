@@ -34,7 +34,7 @@ print_FFT_NS_Info();
 %
 % Simulation Parameters
 %
-nu=1.0e-3;  % kinematic viscosity (density/dynamic viscosity)
+nu=1.0e-3;  % kinematic viscosity (dynamic viscosity/density)
 NX = 256;   % # of grid points in x 
 NY = 256;   % # of grid points in y   
 LX = 1;     % 'Length' of x-Domain
