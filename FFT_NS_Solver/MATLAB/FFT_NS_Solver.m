@@ -42,7 +42,7 @@ LY = 1;     % 'Length' of y-Domain
 
 %
 % Choose initial vorticity state
-% Choices:  'half', 'qtrs', 'rand', 'bubble3', 'bubbleSplit','bubble1'
+% Choices:  'half', 'qtrs', 'rand', 'bubble3', 'bubbleSplit','bubble1','jets'
 %
 choice='bubble3';
 [vort_hat,dt,tFinal,plot_dump] = please_Give_Initial_Vorticity_State(choice,NX,NY);
@@ -261,10 +261,27 @@ elseif strcmp(choice,'rand')
     %
     
     vort = 2*rand(NX,NY)-1;
-    dt=1e-1;       % time step
-    tFinal = 1000; % final time
-    plot_dump=25;  % interval for plots
-
+    
+    %dt=1e-1;       % time step
+    %tFinal = 1000; % final time
+    %plot_dump=25;  % interval for plots
+    dt = 1e-2;      % time step
+    tFinal = 30;    % final time
+    plot_dump= 100;  % interval for plots
+    
+elseif strcmp(choice,'jets')
+    
+    %
+    % DOMAIN MUST BE SQUARE AND 256x256 FOR THIS BUILT-IN EXAMPLE.
+    %
+    addpath('Get_Initial_Vorticity_From_Stored_Vector_Field');
+    vort = give_Initial_Vorticity_From_Velocity_Field_VTK_File;
+    vort = vort / 1000;
+    
+    dt = 1e-2;       % time step
+    tFinal = 50;      % final time
+    plot_dump= 100; % interval for plots    
+    
 elseif strcmp(choice,'bubble1')
     
     %
