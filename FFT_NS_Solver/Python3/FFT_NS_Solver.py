@@ -547,7 +547,7 @@ def FFT_NS_Solver():
     # Choose initial vorticity state
     # Choices:  'half', 'qtrs', 'rand', 'bubble1', 'bubbleSplit', 'bubble3', 'jets'
     #
-    choice='jets'
+    choice='bubble3'
     vort_hat,dt,tFinal,plot_dump = please_Give_Initial_Vorticity_State(choice,NX,NY)
 
     #
