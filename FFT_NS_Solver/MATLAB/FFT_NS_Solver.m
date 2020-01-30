@@ -6,7 +6,7 @@ function FFT_NS_Solver()
 %
 % Author: Nicholas A. Battista
 % Created: Novermber 29, 2014
-% Modified: September 28, 2019
+% Modified: January 30, 2020
 % 
 % Equations of Motion:
 % D (Vorticity) /Dt = nu*Laplacian(Vorticity)  
@@ -531,7 +531,7 @@ fprintf(' \nSolves the Navier-Stokes equations in the Vorticity-Stream Function 
 fprintf(' formulation using a pseudo-spectral approach w/ FFT \n\n');
 fprintf(' Author: Nicholas A. Battista \n');
 fprintf(' Created: Novermber 29, 2014 \n');
-fprintf(' Modified: December 5, 2014 \n\n');
+fprintf(' Modified: January 30, 2020 \n\n');
 fprintf(' Equations of Motion: \n');
 fprintf(' D (Vorticity) /Dt = nu*Laplacian(Vorticity)  \n');
 fprintf(' Laplacian(Psi) = - Vorticity                 \n\n');                                     
@@ -601,6 +601,13 @@ elseif strcmp(choice,'rand')
     fprintf('You are simulating a field of random vorticity values\n');
     fprintf('Try changing the kinematic viscosity to see how the flow changes\n');
     fprintf('_________________________________________________________________________\n\n');
+
+elseif strcmp(choice,'jets')
+    
+    fprint('You are simulating the evolution of vorticity from an initial velocity field\n')
+    fprint('Try changing the kinematic viscosity to see how the flow changes\n')
+    fprint('Try importing a different initial velocity field\n')
+    fprint('_________________________________________________________________________\n\n')
 
      
 end
