@@ -4,7 +4,7 @@
  Author: Nicholas A. Battista
  Created: Novermber 29, 2014 (MATLAB VERSION)
  Created: April 27, 2017 (PYTHON3 VERSION)
- MODIFIED: September 29, 2019 (PYTHON3 VERSION)
+ MODIFIED: January 30, 2020 (PYTHON3 VERSION)
  
  Equations of Motion:
  D (Vorticity) /Dt = nu*Laplacian(Vorticity)  
@@ -28,7 +28,13 @@
 import numpy as np
 from scipy import misc, fftpack
 import os
+import sys
 from print_vtk_files import *
+
+
+# Path Reference to where Initial Velocity Vector Fields are found #
+sys.path.append('Get_Initial_Vorticity_From_Stored_Vector_Field/')
+from give_Initial_Vorticity_From_Velocity_Field_VTK_File import *
 
 ###########################################################################
 #
@@ -43,7 +49,7 @@ def print_FFT_NS_Info():
     print(' formulation using a pseudo-spectral approach w/ FFT \n\n')
     print(' Author: Nicholas A. Battista \n')
     print(' Created: Novermber 29, 2014 \n')
-    print(' Modified: September 29, 2019 \n\n')
+    print(' Modified: January 30, 2020 \n\n')
     print(' Equations of Motion: \n')
     print(' D (Vorticity) /Dt = nu*Laplacian(Vorticity)  \n')
     print(' Laplacian(Psi) = - Vorticity                 \n\n')                                     
@@ -118,7 +124,12 @@ def print_Simulation_Info(choice):
         print('Try changing the kinematic viscosity to see how the flow changes\n')
         print('_________________________________________________________________________\n\n')
 
+    elif (choice == 'jets'):
 
+        print('You are simulating the evolution of vorticity from an initial velocity field\n')
+        print('Try changing the kinematic viscosity to see how the flow changes\n')
+        print('Try importing a different initial velocity field\n')
+        print('_________________________________________________________________________\n\n')
 
 
 ###########################################################################
@@ -255,6 +266,18 @@ def please_Give_Initial_Vorticity_State(choice,NX,NY):
         dt=1e-1       # time step
         tFinal = 1000 # final time
         plot_dump=25  # interval for plots
+
+    elif ( choice == 'jets' ):
+    
+        #
+        # DOMAIN MUST BE SQUARE AND 256x256 FOR THIS BUILT-IN EXAMPLE.
+        #
+        vort = give_Initial_Vorticity_From_Velocity_Field_VTK_File()
+        vort = vort / 1000
+        
+        dt = 1e-2        # time step
+        tFinal = 50      # final time
+        plot_dump= 100   # interval for plots 
     
     elif ( choice == 'bubble1' ):
         
@@ -522,9 +545,9 @@ def FFT_NS_Solver():
 
     #
     # Choose initial vorticity state
-    # Choices:  'half', 'qtrs', 'rand', 'bubble1', 'bubbleSplit', 'bubble3'
+    # Choices:  'half', 'qtrs', 'rand', 'bubble1', 'bubbleSplit', 'bubble3', 'jets'
     #
-    choice='bubble3'
+    choice='jets'
     vort_hat,dt,tFinal,plot_dump = please_Give_Initial_Vorticity_State(choice,NX,NY)
 
     #
