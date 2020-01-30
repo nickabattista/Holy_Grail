@@ -34,12 +34,44 @@ savevtk_scalar(uMag, confName, 'uMag',dx,dy);
 confName = ['Omega.' strNUM '.vtk'];
 savevtk_scalar(vorticity, confName, 'Omega',dx,dy);
 
+%Compute/Prints div( vec{u} ).
+%divU = compute_Divergence_of_Vector_Field(U,V,dx,dy);
+%confName = ['DivU.' strNUM '.vtk'];
+%savevtk_scalar(divU, confName, 'DivU',dx,dy);
+
 %Print VECTOR DATA (i.e., velocity data) to .vtk file
 velocityName = ['u.' strNUM '.vtk'];
 savevtk_vector(U, V, velocityName, 'u',dx,dy)
 
 %Get out of vtk_data folder
 cd ..
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% FUNCTION: computes the divergence of vector field vec{u} = (U,V)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function divU = compute_Divergence_of_Vector_Field(U,V,dx,dy)
+
+% Get Size of Matrix
+[Ny,Nx] = size(U);
+
+% Initialize
+Ux = zeros(Nx-1,Ny-1);
+Vy = Ux;
+
+for i=2:Nx-1
+    Ux(:,i-1) = ( U(1:end-1,i+1) - U(1:end-1,i-1) ) / (2*dx);
+end
+
+for j=2:Ny-1
+    Vy(j-1,:) = ( V(j+1,1:end-1) - V(j-1,1:end-1) ) / (2*dy);
+end
+
+% Add to find the divergence of the vector field
+divU = Ux + Vy;
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
