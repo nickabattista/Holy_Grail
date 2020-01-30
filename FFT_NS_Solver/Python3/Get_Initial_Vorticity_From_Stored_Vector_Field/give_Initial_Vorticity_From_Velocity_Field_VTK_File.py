@@ -1,0 +1,223 @@
+###########################################################################
+#
+# FUNCTION: from a u.XXXX.vtk file, we will extract U,V (x-Velocity and
+# y-Velocity components), compute the background vorticity, and then return
+# it to initialize a simulation.
+#
+###########################################################################
+
+#from pathlib import Path
+import numpy as np
+import os
+#import vtk
+#from vtk.util import numpy_support
+#from vtk.numpy_interface import dataset_adapter as dsa
+
+
+#################################################################################
+#
+# FUNCTION: Reads in (x,y) positions of the immersed boundary from .vtk format
+#          
+################################################################################
+
+def read_Eulerian_Velocity_Field_vtk(simNums):
+    
+    simulation_path = os.getcwd();  # Stores working directory's path        
+    velocity_path = 'Get_Initial_Vorticity_From_Stored_Vector_Field'
+    os.chdir(velocity_path);        # cd's into vorticity initialization folder
+
+    filename = 'u.' + str(simNums) + '.vtk'
+
+    # Stores grid resolution from .vtk file
+    Nx = np.genfromtxt(filename, skip_header=5, usecols=(1),max_rows=1)   
+    
+    # Stores desired Eulerian data
+    e_data_X = np.genfromtxt(filename, skip_header=13, usecols=range(0,3*int(Nx),3),max_rows=int(Nx))
+    e_data_Y = np.genfromtxt(filename, skip_header=13, usecols=range(1,3*int(Nx),3),max_rows=int(Nx))
+
+    # Go back to working directory
+    os.chdir(simulation_path);     
+
+    return e_data_X, e_data_Y
+
+############################################################################
+#
+# FUNCTION: computes the VORTICITY from the vector field's components, U and V
+#           e.g., vec{u} = (U,V)
+#
+##############################################################################
+
+def compute_Vorticity(U,V,dx,dy):
+
+    # Get Size of Matrix
+    [Ny,Nx] = U.shape
+
+    # Initialize storage matrices
+    Uy = np.zeros((Ny,Nx))
+    Vx = np.zeros((Ny,Nx))
+
+    #
+    # Find partial derivative with respect to x of vertical component of
+    # velocity, V
+    #
+    # Recall '-1' equivalent to MATLAB's 'end'
+    #
+    for i in range(1,Nx+1):
+        
+        ii=i-1 # index starting at 0
+
+        if (i==1):
+            Vx[0:,ii] = ( V[0:,1] - V[0:,-1] ) / (2*dx)
+        elif (i==Nx):
+            Vx[0:,ii] = ( V[0:,0] - V[0:,ii-1] ) / (2*dx)
+        else:
+            Vx[0:,ii] = ( V[0:,ii+1] - V[0:,ii-1] ) / (2*dx)
+        
+
+    #
+    # Find partial derivative with respect to y of horizontal component of
+    # velocity, U
+    #
+    for j in range(1,Ny+1):
+
+        jj=j-1 # index starting at 0
+
+        if (j==1):
+            Uy[jj,0:] = ( U[1,0:] - U[-1,0:] ) / (2*dy)
+        elif (j==Ny):
+            Uy[jj,0:] = ( U[0,0:] - U[jj-1,0:] ) / (2*dy)
+        else:
+            Uy[jj,0:] = ( U[jj+1,0:] - U[jj-1,0:] ) / (2*dy)
+
+
+
+    # Take difference to find vorticity ( Curl(vec{u}) in 2D )
+    vorticity = Vx - Uy
+
+    return vorticity
+
+
+###########################################################################
+#
+# FUNCTION: from a u.XXXX.vtk file, we will extract U,V (x-Velocity and
+# y-Velocity components), compute the background vorticity, and then return
+# it to initialize a simulation.
+#
+###########################################################################
+
+def give_Initial_Vorticity_From_Velocity_Field_VTK_File():
+
+    #
+    # Grid Parameters (Make sure to match from FFT_NS_Solver.m)
+    #
+    Lx = 1     # x-Length of Computational Grid
+    Ly = 1     # y-Length of Computational Grid
+    Nx = 256   # Grid resolution in x-Direction
+    Ny = 256   # Grid resolution in y-Direction
+    dx = Lx/Nx # Spatial step-size in x
+    dy = Ly/Ny # Spatial step-size in y
+
+
+    #
+    # Get back components of velocity field, U,V, e.g., \vec{u} = (U,V)
+    # 
+    # Note: U,V are both matrices
+    #
+    simNumsString = '0070'
+    U_orig,V_orig = read_Eulerian_Velocity_Field_vtk(simNumsString)
+
+    # Note the u.0070.vtk case was performed at 512x512 resolution, hence we
+    # will downsample for the velocity field, e.g., for 256x256 choose every
+    # other point
+    lenY,lenX = U_orig.shape
+    
+    # Amount to downsample by
+    downsample = int(lenY/Ny)
+
+    # Store newly downsampled matrices
+    U = U_orig[::downsample,::downsample]
+    V = V_orig[::downsample,::downsample]
+
+    #
+    # Compute Vorticity from Velocity Components
+    #
+    initial_vorticity = compute_Vorticity(U,V,dx,dy)
+
+    #
+    # Transpose the vorticity
+    #
+    initial_vorticity = np.transpose(initial_vorticity)
+
+    return initial_vorticity
+
+# ###########################################################################
+# #
+# # FUNCTION: Reads in the velocity data field from .vtk format
+# #
+# ###########################################################################
+
+# def read_Eulerian_Velocity_Field_vtk(simNums, xy=False):
+#     '''This is to read Eulerian IB2d data, either scalar or vector.'''
+
+#     #filename = Path(path) / (strChoice + '.' + str(simNums) + '.vtk')
+#     filename = 'u.' + str(simNums) + '.vtk'
+#     data = read_vtk_Structured_Points(str(filename))
+
+#     if xy:
+#         # reconstruct mesh
+#         origin = data[-2]
+#         spacing = data[-1]
+#         x = np.arange(data[0].shape[0])*spacing[0]+origin[0]
+#         y = np.arange(data[0].shape[1])*spacing[1]+origin[1]
+
+#     # infer if it was a vector or not and return accordingly
+#     if len(data) == 3:
+#         # scalar
+#         if xy:
+#             return data[0], x, y
+#         else:
+#             return data[0]
+#     else:
+#         # vector
+#         if xy:
+#             return data[0], data[1], x, y
+#         else:
+#             return data[0], data[1]
+
+
+
+# def read_vtk_Structured_Points(filename):
+#     '''This will read in either Scalar or Vector data!'''
+
+#     # Check for valid filename (vtk crashes badly if filename is invalid)
+#     if not Path(filename).exists():
+#         raise OSError(2, "No such file", filename)
+
+#     # Load data
+#     reader = vtk.vtkStructuredPointsReader()
+#     reader.SetFileName(filename)
+#     reader.Update()
+#     vtk_data = reader.GetOutput()
+
+#     # Get mesh data
+#     mesh_shape = vtk_data.GetDimensions()
+#     origin = vtk_data.GetOrigin()
+#     spacing = vtk_data.GetSpacing()
+
+#     # Read in data
+#     scalar_data = vtk_data.GetPointData().GetScalars()
+#     if scalar_data is not None:
+#         np_data = numpy_support.vtk_to_numpy(scalar_data)
+#         e_data = np.reshape(np_data, mesh_shape[::-1]).squeeze()
+#         # Indexed [z,y,x] since x changes, then y, then z in the flattened array
+#         return e_data, origin, spacing
+#     else:
+#         vector_data = vtk_data.GetPointData().GetVectors()
+#         np_data = numpy_support.vtk_to_numpy(vector_data)
+#         e_data_X = np.reshape(np_data[:,0], mesh_shape[::-1]).squeeze()
+#         e_data_Y = np.reshape(np_data[:,1], mesh_shape[::-1]).squeeze()
+#         e_data_Z = np.reshape(np_data[:,2], mesh_shape[::-1]).squeeze()
+#         # Each of these are indexed via [z,y,x], since x changes, then y, then z
+#         #   in the flattened array.
+#         return e_data_X, e_data_Y, e_data_Z, origin, spacing
+
