@@ -216,5 +216,5 @@ def print_vtk_files(ctsave,U,V,vorticity,Lx,Ly,nx,ny):
     velocityName = 'u.' + strNUM + '.vtk' 
     savevtk_vector(U, V, velocityName, 'u',dx,dy)
 
-    #Get out of viz_IB2d folder
+    #Get out of vtk_data folder
     os.chdir('..')
