@@ -4,7 +4,7 @@
  Author: Nicholas A. Battista
  Created: Novermber 29, 2014 (MATLAB VERSION)
  Created: April 27, 2017 (PYTHON3 VERSION)
- MODIFIED: January 30, 2020 (PYTHON3 VERSION)
+ MODIFIED: February 2, 2024 (PYTHON3 VERSION)
  
  Equations of Motion:
  D (Vorticity) /Dt = nu*Laplacian(Vorticity)  

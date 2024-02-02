@@ -6,7 +6,7 @@ function FFT_NS_Solver()
 %
 % Author: Nicholas A. Battista
 % Created: Novermber 29, 2014
-% Modified: January 30, 2020
+% Modified: February 2, 2024
 % 
 % Equations of Motion:
 % D (Vorticity) /Dt = nu*Laplacian(Vorticity)  
