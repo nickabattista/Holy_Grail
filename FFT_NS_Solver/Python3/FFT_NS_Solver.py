@@ -444,7 +444,22 @@ def please_Give_Wavenumber_Matrices(NX,NY):
     # Laplacian in Fourier space
     kLaplace = kMatx*kMatx + kMaty*kMaty
 
-    return kMatx, kMaty, kLaplace
+    #--------------------------------------------------------
+    # Find Which Indices to Use for Poisson Problem Solve
+    #--------------------------------------------------------
+    kVecX = kMatx[0,:];        # Gives row vector from kx
+    kVecY = kMaty[:,0];        # Gives column vector from ky
+    kSQR = np.zeros((NX,NY),dtype=np.complex_)  # Initialize solution matrix
+    #
+    for i in range(1,NX+1):
+        for j in range(1,NY+1):
+            kSQR[i-1,j-1] = ( kVecX[j-1]**2 + kVecY[i-1]**2 )
+
+    kSQR[0,0] = 1; # Otherwise is zero and can't divide later 
+                   # Will set that entry to 0 ultimately so doesn't matter
+                   # (see solving Poisson problem)
+
+    return kMatx, kMaty, kLaplace, kSQR
 
 
 ###########################################################################
@@ -453,18 +468,29 @@ def please_Give_Wavenumber_Matrices(NX,NY):
 #
 ###########################################################################
 
-def please_Solve_Poission(w_hat,kx,ky,NX,NY):
+def please_Solve_Poisson(w_hat,kx,ky,NX,NY,kSQR):
 
  
+    #--------------------------------------------------------------
+    # NEEDED INITIALIZATION FOR ORIGINAL FOR-LOOP IMPLEMENTATION
+    #--------------------------------------------------------------
+    #psi_hat2 = np.zeros((NX,NY),dtype=np.complex_)  # Initialize solution matrix
+    #kVecX = kx[0,:]                                # Gives row vector from kx
+    #kVecY = ky[:,0]                                # Gives column vector from ky
+    
+    #---------------------------------------------
+    # ORIGINAL FOR-LOOP (SLOWER) IMPLEMENTATION
+    #---------------------------------------------
+    #for i in range(1,NX+1):
+    #    for j in range(1,NY+1):
+    #        if ( i+j > 2 ):
+    #            psi_hat2[i-1,j-1] = -w_hat[i-1,j-1] / ( ( kVecX[j-1]**2 + kVecY[i-1]**2 ) ) # "inversion step"
 
-    psi_hat = np.zeros((NX,NY),dtype=np.complex_)  # Initialize solution matrix
-    kVecX = kx[0,:]                                # Gives row vector from kx
-    kVecY = ky[:,0]                                # Gives column vector from ky
-
-    for i in range(1,NX+1):
-        for j in range(1,NY+1):
-            if ( i+j > 2 ):
-                psi_hat[i-1,j-1] = -w_hat[i-1,j-1] / ( ( kVecX[j-1]**2 + kVecY[i-1]**2 ) ) # "inversion step"
+    #---------------------------------------------
+    # VECTORIZED IMPLEMENTATION (for speed up)!
+    #---------------------------------------------
+    psi_hat = np.divide(-w_hat, kSQR ) # "inversion step"
+    psi_hat[0,0] = 0;                  # need to zero out mode
 
     return psi_hat
 
@@ -483,14 +509,22 @@ def please_Solve_Poission(w_hat,kx,ky,NX,NY):
 
 def please_Perform_Crank_Nicholson_Semi_Implict(dt,nu,NX,NY,kLaplace,advect_hat,vort_hat):
 
-    for i in range(1,NX+1):
-        for j in range(1,NY+1):
+    #---------------------------------------------
+    # ORIGINAL FOR-LOOP (SLOWER) IMPLEMENTATION
+    #---------------------------------------------
+    # vort_hat = np.zeros((NX,NY),dtype=np.complex_)  # Initialize solution matrix
+    # for i in range(1,NX+1):
+    #    for j in range(1,NY+1):
+    
+    #        #Crank-Nicholson Semi-Implicit Time-step
+    #        vort_hat[i-1,j-1] = ( (1 + dt/2*nu*kLaplace[i-1,j-1] )*vort_hat[i-1,j-1] - dt*advect_hat[i-1,j-1] ) / (  1 - dt/2*nu*kLaplace[i-1,j-1] )
 
-            #Crank-Nicholson Semi-Implicit Time-step
-            vort_hat[i-1,j-1] = ( (1 + dt/2*nu*kLaplace[i-1,j-1] )*vort_hat[i-1,j-1] - dt*advect_hat[i-1,j-1] ) / (  1 - dt/2*nu*kLaplace[i-1,j-1] )
+    #---------------------------------------------
+    # VECTORIZED OPERATIONS FOR SPEED-UP
+    #---------------------------------------------
+    vort_hat = np.divide( ( np.multiply( (1 + dt/2*nu*kLaplace ) , vort_hat ) - dt*advect_hat ), (  1 - dt/2*nu*kLaplace ) )
 
     return vort_hat
-
 
 
 
@@ -553,7 +587,7 @@ def FFT_NS_Solver():
     #
     # Initialize wavenumber storage for fourier exponentials
     #
-    kMatx, kMaty, kLaplace = please_Give_Wavenumber_Matrices(NX,NY)
+    kMatx, kMaty, kLaplace, kSQR = please_Give_Wavenumber_Matrices(NX,NY)
 
 
     t=0.0                                                 # Initialize time to 0.0
@@ -565,7 +599,7 @@ def FFT_NS_Solver():
         if n==0:
 
             #Solve Poisson Equation for Stream Function, psi
-            psi_hat = please_Solve_Poission(vort_hat,kMatx,kMaty,NX,NY)
+            psi_hat = please_Solve_Poisson(vort_hat,kMatx,kMaty,NX,NY,kSQR)
 
             #Find Velocity components via derivatives on the stream function, psi
             u  = fftpack.ifft2( kMaty*psi_hat ).real        # Compute  y derivative of stream function ==> u = psi_y
@@ -592,7 +626,7 @@ def FFT_NS_Solver():
         else:
 
             #Solve Poisson Equation for Stream Function, psi
-            psi_hat = please_Solve_Poission(vort_hat,kMatx,kMaty,NX,NY)
+            psi_hat = please_Solve_Poisson(vort_hat,kMatx,kMaty,NX,NY,kSQR)
 
             #Find Velocity components via derivatives on the stream function, psi
             u  = fftpack.ifft2( kMaty*psi_hat ).real        # Compute  y derivative of stream function ==> u = psi_y
