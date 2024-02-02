@@ -47,10 +47,11 @@ LY = 1;     % 'Length' of y-Domain
 choice='bubble3';
 [vort_hat,dt,tFinal,plot_dump] = please_Give_Initial_Vorticity_State(choice,NX,NY);
 
-%
+
+%-----------------------------------------------------------
 % Initialize wavenumber storage for fourier exponentials
-%
-[kMatx, kMaty, kLaplace] = please_Give_Wavenumber_Matrices(NX,NY);
+%-----------------------------------------------------------
+[kMatx, kMaty, kLaplace, kSQR] = please_Give_Wavenumber_Matrices(NX,NY);
 
 
 t=0.0;            %Initialize time to 0.0
@@ -62,7 +63,7 @@ for n=0:nTot      %Enter Time-Stepping Loop!
     if n==0
         
         %Solve Poisson Equation for Stream Function, psi
-        psi_hat = please_Solve_Poission(vort_hat,kMatx,kMaty,NX,NY);
+        psi_hat = please_Solve_Poisson(vort_hat,kMatx,kMaty,NX,NY,kSQR);
 
         %Find Velocity components via derivatives on the stream function, psi
         u  =real(ifft2( kMaty.*psi_hat));        % Compute  y derivative of stream function ==> u = psi_y
@@ -85,7 +86,7 @@ for n=0:nTot      %Enter Time-Stepping Loop!
     else
     
         %Solve Poisson Equation for Stream Function, psi
-        psi_hat = please_Solve_Poission(vort_hat,kMatx,kMaty,NX,NY);
+        psi_hat = please_Solve_Poisson(vort_hat,kMatx,kMaty,NX,NY,kSQR);
 
         %Find Velocity components via derivatives on the stream function, psi
         u  =real(ifft2( kMaty.*psi_hat));        % Compute  y derivative of stream function ==> u = psi_y
@@ -408,26 +409,43 @@ print_Simulation_Info(choice);
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [kMatx, kMaty, kLaplace] = please_Give_Wavenumber_Matrices(NX,NY)
+function [kMatx, kMaty, kLaplace, kSQR] = please_Give_Wavenumber_Matrices(NX,NY)
 
-kMatx = zeros(NX,NY);
-kMaty = kMatx;
+    % Initialize storage
+    kMatx = zeros(NX,NY);
+    kMaty = kMatx;
 
-rowVec = [0:NY/2 (-NY/2+1):1:-1];
-colVec = [0:NX/2 (-NX/2+1):1:-1]';
+    rowVec = [0:NY/2 (-NY/2+1):1:-1];
+    colVec = [0:NX/2 (-NX/2+1):1:-1]';
 
-%Makes wavenumber matrix in x
-for i=1:NX
-   kMatx(i,:) = 1i*rowVec;
-end
+    %Makes wavenumber matrix in x
+    for i=1:NX
+       kMatx(i,:) = 1i*rowVec;
+    end
 
-%Makes wavenumber matrix in y (NOTE: if Nx=Ny, kMatx = kMaty')
-for j=1:NY
-   kMaty(:,j) = 1i*colVec; 
-end
+    %Makes wavenumber matrix in y (NOTE: if Nx=Ny, kMatx = kMaty')
+    for j=1:NY
+       kMaty(:,j) = 1i*colVec; 
+    end
 
-% Laplacian in Fourier space
-kLaplace=kMatx.^2+kMaty.^2;        
+    % Laplacian in Fourier space
+    kLaplace=kMatx.^2+kMaty.^2;        
+
+
+    %--------------------------------------------------------
+    % Find Which Indices to Use for Poisson Problem Solve
+    %--------------------------------------------------------
+    kVecX = kMatx(1,:);        %Gives row vector from kx
+    kVecY = kMaty(:,1);        %Gives column vector from ky
+    kSQR = zeros(NX,NY);  
+    for i = 1:NX
+        for j = 1:NY
+            kSQR(i,j) = ( kVecX(j)^2 + kVecY(i)^2 );
+        end
+    end 
+    kSQR(1,1) = 1; % Otherwise is zero and can't divide later 
+                   % Will set that entry to 0 ultimately so doesn't matter
+                   % (see solving Poisson problem)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -435,19 +453,33 @@ kLaplace=kMatx.^2+kMaty.^2;
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function psi_hat = please_Solve_Poission(w_hat,kx,ky,NX,NY)
+function psi_hat = please_Solve_Poisson(w_hat,kx,ky,NX,NY,kSQR)
 
-psi_hat = zeros(NX,NY); %Initialize solution matrix
-kVecX = kx(1,:);        %Gives row vector from kx
-kVecY = ky(:,1);        %Gives column vector from ky
+    %--------------------------------------------------------------
+    % NEEDED INITIALIZATION FOR ORIGINAL FOR-LOOP IMPLEMENTATION
+    %--------------------------------------------------------------
+    %psi_hat = zeros(NX,NY); %Initialize solution matrix
+    %kVecX = kx(1,:);        %Gives row vector from kx
+    %kVecY = ky(:,1);        %Gives column vector from ky
 
-for i = 1:NX
-    for j = 1:NY
-        if ( i+j > 2 )
-            psi_hat(i,j) = -w_hat(i,j)/( ( kVecX(j)^2+ kVecY(i)^2 ) ); % "inversion step"
-        end
-    end
-end
+    
+    %---------------------------------------------
+    % ORIGINAL FOR-LOOP (SLOWER) IMPLEMENTATION
+    %---------------------------------------------
+    %for i = 1:NX
+    %  for j = 1:NY
+    %      if ( i+j > 2 )
+    %          psi_hat2(i,j) = -w_hat(i,j)/( ( kVecX(j)^2+ kVecY(i)^2 ) ); % "inversion step"
+    %      end
+    %  end
+    %end
+
+    
+    %---------------------------------------------
+    % VECTORIZED IMPLEMENTATION (for speed up)!
+    %---------------------------------------------
+    psi_hat = -w_hat ./ ( kSQR ); % "inversion step"
+    psi_hat(1,1) = 0;             % need to zero out mode
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -508,15 +540,22 @@ end
 
 function vort_hat = please_Perform_Crank_Nicholson_Semi_Implict(dt,nu,NX,NY,kLaplace,advect_hat,vort_hat)
 
-    for i=1:NX
-        for j=1:NY
-
-            %Crank-Nicholson Semi-Implicit Time-step
-            vort_hat(i,j) = ( (1 + dt/2*nu*kLaplace(i,j) )*vort_hat(i,j) - dt*advect_hat(i,j) ) / (  1 - dt/2*nu*kLaplace(i,j) );
-
-        end
-    end
+    %---------------------------------------------
+    % ORIGINAL FOR-LOOP (SLOWER) IMPLEMENTATION
+    %---------------------------------------------
+    %for i=1:NX
+    %   for j=1:NY
+    % 
+    %       %Crank-Nicholson Semi-Implicit Time-step
+    %       vort_hat(i,j) = ( (1 + dt/2*nu*kLaplace(i,j) )*vort_hat(i,j) - dt*advect_hat(i,j) ) / (  1 - dt/2*nu*kLaplace(i,j) );%
+    %   end
+    %end
     
+    %---------------------------------------------
+    % VECTORIZED OPERATIONS FOR SPEED-UP
+    %---------------------------------------------
+    vort_hat = ( (1 + dt/2*nu*kLaplace ).*vort_hat - dt*advect_hat ) ./ (  1 - dt/2*nu*kLaplace );
+
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
